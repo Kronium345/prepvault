@@ -21,3 +21,30 @@ export const startCall = async (req: Request, res: Response): Promise<any> => {
     });
   }
 };
+
+
+export const endCall = async (req: Request, res: Response): Promise<any> => {
+  const { call_id } = req.body;
+
+  if (!call_id) {
+    return res.status(400).json({ success: false, message: 'Call ID is required.' });
+  }
+
+  try {
+    await fetch(`https://api.vapi.ai/v1/calls/${call_id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.VAPI_API_KEY}`,
+      },
+      body: JSON.stringify({ status: 'completed' }),
+    });
+
+    return res.status(200).json({ success: true, message: 'Call ended successfully.' });
+  } catch (error) {
+    console.error('Error ending call:', error);
+    return res.status(500).json({ success: false, message: 'Failed to end call.' });
+  }
+};
+
+

@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image, View, Text, Animated, TouchableOpacity } from 'react-native';
 import tw from 'twrnc';
@@ -15,8 +16,54 @@ enum CallStatus {
   FINISHED = 'FINISHED',
 }
 
+interface SavedMessage {
+  role: 'user' | 'system' | 'assistant';
+  content: string;
+}
+
 const Agent = ({ userName, userId, type }: AgentProps) => {
-  const isSpeaking = true;
+  const router = useRouter();
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [messages, setMessages] = useState<SavedMessage[]>([]);
+
+  useEffect(() => {
+    const onCallStart = () => setCallStatus(CallStatus.ACTIVE);
+    const onCallEnd = () => setCallStatus(CallStatus.FINISHED);
+
+    const onMessage = (message: Message) => {
+      if (message.type === 'transcript' && message.transcriptType === 'final') {
+        const newMessage = { role: message.role, content: message.transcript };
+
+        setMessages((prev) => [...prev, newMessage]);
+      }
+    };
+
+    const onSpeechStart = () => setIsSpeaking(true);
+    const onSpeechEnd = () => setIsSpeaking(false);
+
+    const onError = (error: Error) => console.log('Error', error);
+
+    // vapi.on('call-start', onCallStart);
+    // vapi.on('call-end', onCallEnd);
+    // vapi.on('message', onMessage);
+    // vapi.on('speech-start', onSpeechStart);
+    // vapi.on('speech-end', onSpeechEnd);
+    // vapi.on('error', onError);
+
+    // return () => {
+    //   vapi.off('call-start', onCallStart);
+    //   vapi.off('call-end', onCallEnd);
+    //   vapi.off('message', onMessage);
+    //   vapi.off('speech-start', onSpeechStart);
+    //   vapi.off('speech-end', onSpeechEnd);
+    //   vapi.off('error', onError);
+    // }
+  }, []);
+
+  useEffect(() => {
+    if (callStatus === CallStatus.FINISHED) router.push('/home');
+  }, [message, callStatus, type, userId]);
+
   const messages = [
     'What is your name?',
     'My name is John Doe. Nice to meet you.',
@@ -24,6 +71,7 @@ const Agent = ({ userName, userId, type }: AgentProps) => {
 
   const lastMessage = messages[messages.length - 1];
   const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
+  const [callId, setCallId] = useState<string | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -58,19 +106,69 @@ const Agent = ({ userName, userId, type }: AgentProps) => {
     return () => fadeAnim.setValue(0);
   }, [lastMessage]);
 
-  const handleCallButton = () => {
+  const handleCallButton = async () => {
     if (
       callStatus === CallStatus.INACTIVE ||
       callStatus === CallStatus.FINISHED
     ) {
       setCallStatus(CallStatus.CONNECTING);
-      // Add your connection logic here
+      try {
+        const response = await fetch(
+          'https://prepvault-1rdj.onrender.com/vapi/start',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              user_id: userId,
+              assistant_id: process.env.EXPO_PUBLIC_VAPI_ASSISTANT_ID,
+              type,
+            }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (data.success) {
+          setCallStatus(CallStatus.ACTIVE);
+          setCallId(data.call?.id);
+        } else {
+          console.error('Call failed:', data.message);
+          setCallStatus(CallStatus.FINISHED);
+        }
+      } catch (error) {
+        console.error('Error starting call:', error);
+        setCallStatus(CallStatus.FINISHED);
+      }
     }
   };
 
-  const handleEndCall = () => {
+  const handleEndCall = async () => {
     setCallStatus(CallStatus.FINISHED);
-    // Add your disconnect logic here
+
+    try {
+      const response = await fetch(
+        'https://prepvault-1rdj.onrender.com/vapi/end',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            call_id: callId, // 👈 replace this with the actual call ID from your backend if you’re storing it
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!data.success) {
+        console.warn('Call did not end properly:', data.message);
+      }
+    } catch (error) {
+      console.error('Error ending call:', error);
+    }
   };
 
   return (
@@ -130,7 +228,7 @@ const Agent = ({ userName, userId, type }: AgentProps) => {
           >
             <Text style={tw`text-white text-lg font-semibold`}>
               {callStatus === CallStatus.INACTIVE ||
-              callStatus === CallStatus.FINISHED
+                callStatus === CallStatus.FINISHED
                 ? 'Call'
                 : '. . .'}
             </Text>
