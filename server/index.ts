@@ -24,6 +24,10 @@ app.use('/auth', authRoutes);
 app.use('/vapi', vapiRoutes);
 app.use('/gemini', geminiRoutes);
 
+app.get('/', (req, res) => {
+  res.send('PrepVault server is running!');
+});
+
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
