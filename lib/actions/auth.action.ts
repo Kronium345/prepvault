@@ -1,6 +1,6 @@
 export async function signUp(params: SignUpParams) {
   try {
-    const res = await fetch('http://localhost:8082/auth/signup', {
+    const res = await fetch('https://prepvault-1rdj.onrender.com/auth/signup', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -26,7 +26,7 @@ export async function signUp(params: SignUpParams) {
 
 export async function signIn(params: SignInParams) {
   try {
-    const res = await fetch('http://localhost:8082/auth/signin', {
+    const res = await fetch('https://prepvault-1rdj.onrender.com/auth/signin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),
@@ -45,7 +45,7 @@ export async function signIn(params: SignInParams) {
 
 export async function getCurrentUsers(): Promise<User | null> {
   try {
-    const res = await fetch('http://localhost:8082/auth/current-user', {
+    const res = await fetch('https://prepvault-1rdj.onrender.com/auth/current-user', {
       method: 'GET',
       credentials: 'include', // 👈 Required to send cookies
     });
