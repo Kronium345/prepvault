@@ -14,7 +14,7 @@ export default function Home() {
       <View style={styles.ctaCard}>
         <View style={styles.ctaTextContainer}>
           <Text style={styles.ctaTitle}>
-            Get Interview Ready with our AI-Powered Practice & Feedback
+            Get Interview-Ready with our AI-Powered Practice & Feedback
           </Text>
           <Text style={styles.ctaSubtitle}>
             Practice on real interview questions and get feedback on your
