@@ -6,10 +6,9 @@ export const startCall = async (req: Request, res: Response): Promise<any> => {
   try {
     const result = await vapi.calls.create({
       assistantId: process.env.VAPI_ASSISTANT_ID!,
-      phoneNumberId: process.env.VAPI_PHONE_NUMBER_ID!,
       customer: {
         name: req.body.user_name || 'Anonymous',
-        sipUri: 'sip:prepvault-daniel@sip.vapi.ai',
+        sipUri: 'sip:prepvault-daniel@sip.vapi.ai', // 👈 your registered Vapi SIP URI
       },
     });
 
@@ -26,12 +25,13 @@ export const startCall = async (req: Request, res: Response): Promise<any> => {
   }
 };
 
-
 export const endCall = async (req: Request, res: Response): Promise<any> => {
   const { call_id } = req.body;
 
   if (!call_id) {
-    return res.status(400).json({ success: false, message: 'Call ID is required.' });
+    return res
+      .status(400)
+      .json({ success: false, message: 'Call ID is required.' });
   }
 
   try {
@@ -44,11 +44,13 @@ export const endCall = async (req: Request, res: Response): Promise<any> => {
       body: JSON.stringify({ status: 'completed' }),
     });
 
-    return res.status(200).json({ success: true, message: 'Call ended successfully.' });
+    return res
+      .status(200)
+      .json({ success: true, message: 'Call ended successfully.' });
   } catch (error) {
     console.error('Error ending call:', error);
-    return res.status(500).json({ success: false, message: 'Failed to end call.' });
+    return res
+      .status(500)
+      .json({ success: false, message: 'Failed to end call.' });
   }
 };
-
-
