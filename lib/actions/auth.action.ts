@@ -1,3 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+
 export async function signUp(params: SignUpParams) {
   try {
     const res = await fetch('https://prepvault-1rdj.onrender.com/auth/signup', {
@@ -30,10 +33,18 @@ export async function signIn(params: SignInParams) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),
-      credentials: 'include',
     });
 
-    return await res.json();
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Signin failed');
+    }
+
+    // Store the session token manually
+    await AsyncStorage.setItem('session', data.session); // or data.session if that's your key
+
+    return data;
   } catch (error: any) {
     console.error('Error signing in user:', error.message);
     return {
@@ -43,11 +54,18 @@ export async function signIn(params: SignInParams) {
   }
 }
 
+
 export async function getCurrentUsers(): Promise<User | null> {
   try {
+    const session = await AsyncStorage.getItem('session');
+
+    if (!session) return null;
+
     const res = await fetch('https://prepvault-1rdj.onrender.com/auth/current-user', {
       method: 'GET',
-      credentials: 'include', // 👈 Required to send cookies
+      headers: {
+        'Authorization': `Bearer ${session}`,
+      },
     });
 
     const data = await res.json();
@@ -62,6 +80,7 @@ export async function getCurrentUsers(): Promise<User | null> {
     return null;
   }
 }
+
 
 export async function isAuthenticated() {
   const user = await getCurrentUsers();

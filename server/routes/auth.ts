@@ -89,17 +89,20 @@ router.post('/signin', async (req, res): Promise<any> => {
     return res.status(200).json({
       success: true,
       message: 'User signed in and session cookie set.',
+      session: sessionCookie
     });
   } catch (error) {
     console.error('❌ Sign-in error:', error);
     return res.status(401).json({ success: false, message: 'Sign-in failed' });
   }
 });
+
 router.get(
   '/current-user',
   async (req: Request, res: Response): Promise<any> => {
     try {
-      const sessionCookie = req.cookies?.session;
+      const sessionCookie = req.cookies?.session ||
+        req.headers.authorization?.replace('Bearer ', '');
 
       if (!sessionCookie) {
         console.log('❌ No session cookie found');

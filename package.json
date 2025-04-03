@@ -11,10 +11,12 @@
   "dependencies": {
     "@expo/metro-runtime": "~4.0.1",
     "@hookform/resolvers": "^5.0.0",
+    "@react-native-async-storage/async-storage": "^1.24.0",
     "axios": "^1.8.4",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.13",
     "expo": "~52.0.42",
+    "expo-av": "~15.0.2",
     "expo-router": "~4.0.19",
     "expo-status-bar": "~2.0.1",
     "firebase": "^11.6.0",
@@ -28,8 +30,7 @@
     "react-native-web": "~0.19.13",
     "tailwind-merge": "^3.1.0",
     "twrnc": "^4.6.1",
-    "zod": "^3.24.2",
-    "expo-av": "~15.0.2"
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

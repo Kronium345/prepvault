@@ -60,17 +60,19 @@ const Agent = ({ userName, userId, type }: AgentProps) => {
     // }
   }, []);
 
+  const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
+
+
   useEffect(() => {
     if (callStatus === CallStatus.FINISHED) router.push('/home');
-  }, [message, callStatus, type, userId]);
+  }, [messages, callStatus, type, userId]);
 
-  const messages = [
-    'What is your name?',
-    'My name is John Doe. Nice to meet you.',
-  ];
+  // const messages = [
+  //   'What is your name?',
+  //   'My name is John Doe. Nice to meet you.',
+  // ];
 
   const lastMessage = messages[messages.length - 1];
-  const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
   const [callId, setCallId] = useState<string | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -124,6 +126,7 @@ const Agent = ({ userName, userId, type }: AgentProps) => {
               user_id: userId,
               assistant_id: process.env.EXPO_PUBLIC_VAPI_ASSISTANT_ID,
               type,
+              user_name: userName,
             }),
           }
         );
@@ -171,6 +174,9 @@ const Agent = ({ userName, userId, type }: AgentProps) => {
     }
   };
 
+  const latestMessage = messages[messages.length - 1]?.content;
+  const isCallInactiveOrFinished = callStatus === CallStatus.INACTIVE || callStatus === CallStatus.FINISHED;
+
   return (
     <View style={tw`flex-1 bg-black p-4`}>
       {/* Header */}
@@ -211,9 +217,9 @@ const Agent = ({ userName, userId, type }: AgentProps) => {
           <View style={tw`bg-[#1e1b4b]/40 p-4 rounded-xl`}>
             <Animated.Text
               style={[tw`text-white text-base`, { opacity: fadeAnim }]}
-              key={lastMessage}
+              key={latestMessage}
             >
-              {lastMessage}
+              {latestMessage}
             </Animated.Text>
           </View>
         </View>
@@ -227,8 +233,7 @@ const Agent = ({ userName, userId, type }: AgentProps) => {
             style={tw`bg-[#6366f1] py-3 px-6 rounded-lg`}
           >
             <Text style={tw`text-white text-lg font-semibold`}>
-              {callStatus === CallStatus.INACTIVE ||
-                callStatus === CallStatus.FINISHED
+              {isCallInactiveOrFinished
                 ? 'Call'
                 : '. . .'}
             </Text>
