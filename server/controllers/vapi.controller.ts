@@ -4,13 +4,27 @@ import type { Request, Response } from 'express';
 
 export const startCall = async (req: Request, res: Response): Promise<any> => {
   try {
-    const result = await vapi.calls.create({
-      assistantId: process.env.VAPI_ASSISTANT_ID!,
-      customer: {
-        name: req.body.user_name || 'Anonymous',
-        sipUri: 'sip:prepvault-daniel@sip.vapi.ai', // 👈 your registered Vapi SIP URI
+    const response = await fetch('https://api.vapi.ai/v1/calls', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.VAPI_API_KEY}`,
       },
+      body: JSON.stringify({
+        assistantId: process.env.VAPI_ASSISTANT_ID,
+        customer: {
+          name: req.body.user_name || 'Anonymous',
+        },
+        callType: 'web',
+        sipUri: 'sip:prepvault-daniel@sip.vapi.ai',
+      }),
     });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(`Vapi API error: ${result.message || 'Unknown error'}`);
+    }
 
     return res.status(200).json({
       success: true,
