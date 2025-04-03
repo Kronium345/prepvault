@@ -15,8 +15,12 @@ export const startCall = async (req: Request, res: Response): Promise<any> => {
         customer: {
           name: req.body.user_name || 'Anonymous',
         },
-        callType: 'web',
-        sipUri: 'sip:prepvault-daniel@sip.vapi.ai',
+        from: {
+          type: 'web'
+        },
+        to: {
+          sipUri: 'sip:prepvault-daniel@sip.vapi.ai'
+        }
       }),
     });
 
