@@ -116,7 +116,7 @@ const Agent = ({ userName, userId, type }: AgentProps) => {
       setCallStatus(CallStatus.CONNECTING);
       try {
         const response = await fetch(
-          'https://prepvault-1rdj.onrender.com/vapi/start',
+          'https://prepvault-1rdj.onrender.com/vapi/start-call',
           {
             method: 'POST',
             headers: {
