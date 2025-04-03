@@ -4,7 +4,7 @@ import type { Request, Response } from 'express';
 
 export const startCall = async (req: Request, res: Response): Promise<any> => {
   try {
-    const response = await fetch('https://api.vapi.ai/v1/calls', {
+    const response = await fetch('https://api.vapi.ai/call', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -23,6 +23,11 @@ export const startCall = async (req: Request, res: Response): Promise<any> => {
     const result = await response.json();
 
     if (!response.ok) {
+      console.error('Vapi API error details:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: result
+      });
       throw new Error(`Vapi API error: ${result.message || 'Unknown error'}`);
     }
 
