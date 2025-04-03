@@ -7,6 +7,9 @@ export const startCall = async (req: Request, res: Response): Promise<any> => {
     const result = await vapi.calls.create({
       assistantId: process.env.VAPI_ASSISTANT_ID!,
       phoneNumberId: process.env.VAPI_PHONE_NUMBER_ID!,
+      customer: {
+        name: req.body.user_name || 'Anonymous',
+      },
     });
 
     return res.status(200).json({
