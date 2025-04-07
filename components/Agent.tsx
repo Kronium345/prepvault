@@ -2,6 +2,8 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image, View, Text, Animated, TouchableOpacity } from 'react-native';
 import tw from 'twrnc';
+import Vapi from '@vapi-ai/react-native';
+
 
 interface AgentProps {
   userName?: string;
@@ -25,40 +27,29 @@ const Agent = ({ userName, userId, type }: AgentProps) => {
   const router = useRouter();
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [messages, setMessages] = useState<SavedMessage[]>([]);
+  const vapi = useRef<Vapi | null>(null);
+
 
   useEffect(() => {
-    const onCallStart = () => setCallStatus(CallStatus.ACTIVE);
-    const onCallEnd = () => setCallStatus(CallStatus.FINISHED);
+    vapi.current = new Vapi(process.env.EXPO_PUBLIC_VAPI_API_KEY!);
 
-    const onMessage = (message: Message) => {
+    vapi.current.on('call-start', () => setCallStatus(CallStatus.ACTIVE));
+    vapi.current.on('call-end', () => setCallStatus(CallStatus.FINISHED));
+    vapi.current.on('speech-start', () => setIsSpeaking(true));
+    vapi.current.on('speech-end', () => setIsSpeaking(false));
+    vapi.current.on('message', (message) => {
       if (message.type === 'transcript' && message.transcriptType === 'final') {
         const newMessage = { role: message.role, content: message.transcript };
-
         setMessages((prev) => [...prev, newMessage]);
       }
+    });
+    vapi.current.on('error', (error) => console.error('Vapi Error:', error));
+
+    return () => {
+      vapi.current?.stop();
     };
-
-    const onSpeechStart = () => setIsSpeaking(true);
-    const onSpeechEnd = () => setIsSpeaking(false);
-
-    const onError = (error: Error) => console.log('Error', error);
-
-    // vapi.on('call-start', onCallStart);
-    // vapi.on('call-end', onCallEnd);
-    // vapi.on('message', onMessage);
-    // vapi.on('speech-start', onSpeechStart);
-    // vapi.on('speech-end', onSpeechEnd);
-    // vapi.on('error', onError);
-
-    // return () => {
-    //   vapi.off('call-start', onCallStart);
-    //   vapi.off('call-end', onCallEnd);
-    //   vapi.off('message', onMessage);
-    //   vapi.off('speech-start', onSpeechStart);
-    //   vapi.off('speech-end', onSpeechEnd);
-    //   vapi.off('error', onError);
-    // }
   }, []);
+
 
   const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
 
@@ -109,37 +100,10 @@ const Agent = ({ userName, userId, type }: AgentProps) => {
   }, [lastMessage]);
 
   const handleCallButton = async () => {
-    if (
-      callStatus === CallStatus.INACTIVE ||
-      callStatus === CallStatus.FINISHED
-    ) {
+    if (isCallInactiveOrFinished) {
       setCallStatus(CallStatus.CONNECTING);
       try {
-        const response = await fetch(
-          'https://prepvault-1rdj.onrender.com/vapi/start-call',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              user_id: userId,
-              assistant_id: process.env.EXPO_PUBLIC_VAPI_ASSISTANT_ID,
-              type,
-              user_name: userName,
-            }),
-          }
-        );
-
-        const data = await response.json();
-
-        if (data.success) {
-          setCallStatus(CallStatus.ACTIVE);
-          setCallId(data.call?.id);
-        } else {
-          console.error('Call failed:', data.message);
-          setCallStatus(CallStatus.FINISHED);
-        }
+        await vapi.current?.start(process.env.EXPO_PUBLIC_VAPI_ASSISTANT_ID!);
       } catch (error) {
         console.error('Error starting call:', error);
         setCallStatus(CallStatus.FINISHED);
@@ -149,30 +113,9 @@ const Agent = ({ userName, userId, type }: AgentProps) => {
 
   const handleEndCall = async () => {
     setCallStatus(CallStatus.FINISHED);
-
-    try {
-      const response = await fetch(
-        'https://prepvault-1rdj.onrender.com/vapi/end',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            call_id: callId, // 👈 replace this with the actual call ID from your backend if you’re storing it
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!data.success) {
-        console.warn('Call did not end properly:', data.message);
-      }
-    } catch (error) {
-      console.error('Error ending call:', error);
-    }
+    vapi.current?.stop();
   };
+
 
   const latestMessage = messages[messages.length - 1]?.content;
   const isCallInactiveOrFinished = callStatus === CallStatus.INACTIVE || callStatus === CallStatus.FINISHED;
