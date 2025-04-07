@@ -47,8 +47,14 @@ export default function Index() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Welcome to PrepVault 🎯</Text>
-      <Button title="Sign In" onPress={() => router.push('/sign-in')} />
-      <Button title="Sign Up" onPress={() => router.push('/sign-up')} />
+      <Button title="Sign In" onPress={() => {
+        console.log('Navigating to Sign In...')
+        router.push('/sign-in')
+      }} />
+      <Button title="Sign Up" onPress={() => {
+        console.log('Navigating to Sign Up...')
+        router.push('/sign-up')
+      }} />
     </View>
   );
 }
