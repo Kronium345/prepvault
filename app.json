@@ -51,7 +51,6 @@
       "expo-router",
       "@config-plugins/react-native-webrtc",
       "@daily-co/config-plugin-rn-daily-js",
-      "react-native-safe-area-context",
       [
         "expo-build-properties",
         {
