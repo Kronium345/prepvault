@@ -1,22 +1,25 @@
-// vapi.sdk.ts
 import Vapi from '@vapi-ai/react-native';
 import { Platform } from 'react-native';
 
 const vapi = new Vapi(process.env.EXPO_PUBLIC_VAPI_API_KEY!);
 
-// --- Patch starts here ---
-if (Platform.OS === 'android') {
-    try {
-        const anyVapi = vapi as any; // <--- add this
-        if (anyVapi.nativeUtils?.setKeepDeviceAwake) {
-            anyVapi.nativeUtils.setKeepDeviceAwake = () => {
-                console.log('Prevented crash: disabled setKeepDeviceAwake on Android');
-            };
-        }
-    } catch (err) {
-        console.warn('Could not patch Vapi setKeepDeviceAwake:', err);
+// --- Smarter Patch starts here ---
+try {
+    const anyVapi = vapi as any;
+
+    if (
+        Platform.OS === 'android' &&
+        (!anyVapi.nativeUtils || typeof anyVapi.nativeUtils.setKeepDeviceAwake !== 'function')
+    ) {
+        console.log('Patching Vapi: disabling missing setKeepDeviceAwake for Android');
+        anyVapi.nativeUtils = anyVapi.nativeUtils || {};
+        anyVapi.nativeUtils.setKeepDeviceAwake = () => {
+            console.log('Dummy setKeepDeviceAwake called');
+        };
     }
+} catch (err) {
+    console.warn('Could not safely patch Vapi setKeepDeviceAwake:', err);
 }
-// --- Patch ends here ---
+// --- Smarter Patch ends here ---
 
 export default vapi;
