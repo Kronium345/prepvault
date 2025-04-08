@@ -1,25 +1,26 @@
 import Vapi from '@vapi-ai/react-native';
 import { Platform } from 'react-native';
 
-const vapi = new Vapi(process.env.EXPO_PUBLIC_VAPI_API_KEY!);
+const vapiPrototype = Vapi.prototype as any;
 
-// --- Smarter Patch starts here ---
-try {
-    const anyVapi = vapi as any;
+// --- Correct patch ---
+if (Platform.OS === 'android') {
+    try {
+        if (!vapiPrototype.nativeUtils || typeof vapiPrototype.nativeUtils !== 'function') {
+            console.log('Patching Vapi.prototype: replacing missing nativeUtils function');
 
-    if (
-        Platform.OS === 'android' &&
-        (!anyVapi.nativeUtils || typeof anyVapi.nativeUtils.setKeepDeviceAwake !== 'function')
-    ) {
-        console.log('Patching Vapi: disabling missing setKeepDeviceAwake for Android');
-        anyVapi.nativeUtils = anyVapi.nativeUtils || {};
-        anyVapi.nativeUtils.setKeepDeviceAwake = () => {
-            console.log('Dummy setKeepDeviceAwake called');
-        };
+            vapiPrototype.nativeUtils = () => ({
+                setKeepDeviceAwake: () => {
+                    console.log('Dummy setKeepDeviceAwake called (patched nativeUtils)');
+                },
+            });
+        }
+    } catch (err) {
+        console.warn('Could not safely patch Vapi.prototype.nativeUtils():', err);
     }
-} catch (err) {
-    console.warn('Could not safely patch Vapi setKeepDeviceAwake:', err);
 }
-// --- Smarter Patch ends here ---
+// --- Correct patch ends ---
+
+const vapi = new Vapi(process.env.EXPO_PUBLIC_VAPI_API_KEY!);
 
 export default vapi;
