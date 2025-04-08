@@ -2,7 +2,8 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image, View, Text, Animated, TouchableOpacity } from 'react-native';
 import tw from 'twrnc';
-import Vapi from '@vapi-ai/react-native';
+import vapi from '../lib/vapi.sdk';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 
 
 interface AgentProps {
@@ -27,41 +28,69 @@ const Agent = ({ userName, userId, type }: AgentProps) => {
   const router = useRouter();
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [messages, setMessages] = useState<SavedMessage[]>([]);
-  const vapi = useRef<Vapi | null>(null);
+  const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
+
 
 
   useEffect(() => {
-    vapi.current = new Vapi(process.env.EXPO_PUBLIC_VAPI_API_KEY!);
-
-    vapi.current.on('call-start', () => setCallStatus(CallStatus.ACTIVE));
-    vapi.current.on('call-end', () => setCallStatus(CallStatus.FINISHED));
-    vapi.current.on('speech-start', () => setIsSpeaking(true));
-    vapi.current.on('speech-end', () => setIsSpeaking(false));
-    vapi.current.on('message', (message) => {
+    // Event handlers
+    const handleCallStart = () => setCallStatus(CallStatus.ACTIVE);
+    const handleCallEnd = () => setCallStatus(CallStatus.FINISHED);
+    const handleSpeechStart = () => setIsSpeaking(true);
+    const handleSpeechEnd = () => setIsSpeaking(false);
+    const handleMessage = (message: any) => {
       if (message.type === 'transcript' && message.transcriptType === 'final') {
         const newMessage = { role: message.role, content: message.transcript };
         setMessages((prev) => [...prev, newMessage]);
       }
-    });
-    vapi.current.on('error', (error) => console.error('Vapi Error:', error));
+    };
+    const handleError = (error: any) => console.error('Vapi Error:', error);
 
+    // Bind event listeners
+    vapi.on('call-start', handleCallStart);
+    vapi.on('call-end', handleCallEnd);
+    vapi.on('speech-start', handleSpeechStart);
+    vapi.on('speech-end', handleSpeechEnd);
+    vapi.on('message', handleMessage);
+    vapi.on('error', handleError);
+
+    // Cleanup function to unbind event listeners
     return () => {
-      vapi.current?.stop();
+      vapi.off('call-start', handleCallStart);
+      vapi.off('call-end', handleCallEnd);
+      vapi.off('speech-start', handleSpeechStart);
+      vapi.off('speech-end', handleSpeechEnd);
+      vapi.off('message', handleMessage);
+      vapi.off('error', handleError);
     };
   }, []);
 
 
-  const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
 
 
   useEffect(() => {
-    if (callStatus === CallStatus.FINISHED) router.push('/home');
-  }, [messages, callStatus, type, userId]);
+    if (callStatus === CallStatus.FINISHED) {
+      router.push('/home');
+    }
+  }, [callStatus, router]);
 
   // const messages = [
   //   'What is your name?',
   //   'My name is John Doe. Nice to meet you.',
   // ];
+
+  useEffect(() => {
+    if (callStatus === CallStatus.ACTIVE) {
+      activateKeepAwakeAsync();
+    } else {
+      deactivateKeepAwake();
+    }
+
+    return () => {
+      deactivateKeepAwake();
+    };
+  }, [callStatus]);
+
 
   const lastMessage = messages[messages.length - 1];
   const [callId, setCallId] = useState<string | null>(null);
@@ -103,7 +132,7 @@ const Agent = ({ userName, userId, type }: AgentProps) => {
     if (isCallInactiveOrFinished) {
       setCallStatus(CallStatus.CONNECTING);
       try {
-        await vapi.current?.start(process.env.EXPO_PUBLIC_VAPI_ASSISTANT_ID!);
+        await vapi.start(process.env.EXPO_PUBLIC_VAPI_ASSISTANT_ID!);
       } catch (error) {
         console.error('Error starting call:', error);
         setCallStatus(CallStatus.FINISHED);
@@ -113,7 +142,7 @@ const Agent = ({ userName, userId, type }: AgentProps) => {
 
   const handleEndCall = async () => {
     setCallStatus(CallStatus.FINISHED);
-    vapi.current?.stop();
+    vapi.stop();
   };
 
 
