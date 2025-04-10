@@ -1,0 +1,19 @@
+{
+    "files.exclude": {
+        "**/node_modules": false
+    },
+    "search.exclude": {
+        "**/node_modules": false
+    },
+    "java.project.sourcePaths": [
+        "android/app/src/main/java"
+    ],
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "eslint.validate": [
+        "javascript",
+        "javascriptreact",
+        "typescript",
+        "typescriptreact"
+    ]
+}
