@@ -11,7 +11,7 @@ export default function SignIn() {
     <>
       <View style={styles.container}>
         <View style={styles.card}>
-          <Image source={require('../public/logo.svg')} style={styles.logo} />
+          <Image source={require('../assets/logo.svg')} style={styles.logo} />
           <Text style={styles.heading}>Practice job interviews with AI</Text>
 
           <AuthForm type="sign-in" />

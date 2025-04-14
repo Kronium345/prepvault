@@ -65,13 +65,13 @@ const InterviewCard = ({
         <View style={styles.metaRow}>
           <View style={styles.metaItem}>
             <Image
-              source={require('../public/calendar.svg')}
+              source={require('../assets/calendar.svg')}
               style={styles.icon}
             />
             <Text style={styles.metaText}>{formattedDate}</Text>
           </View>
           <View style={styles.metaItem}>
-            <Image source={require('../public/star.svg')} style={styles.icon} />
+            <Image source={require('../assets/star.svg')} style={styles.icon} />
             <Text style={styles.metaText}>
               {feedback?.totalScore ?? '---'}/100
             </Text>

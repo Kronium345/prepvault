@@ -9,7 +9,7 @@ export default function Layout() {
     <PaperProvider>
       <View style={styles.nav}>
         <Image
-          source={require('../public/logo.svg')} // Add logo.svg/png to assets
+          source={require('../assets/logo.svg')} // Add logo.svg/png to assets
           style={styles.logo}
           resizeMode="contain"
         />

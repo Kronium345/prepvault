@@ -1,15 +1,18 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Image, View, Text, Animated, TouchableOpacity } from 'react-native';
+import { Image, View, Text, Animated, TouchableOpacity, Alert } from 'react-native';
 import tw from 'twrnc';
-import vapi from '../lib/vapi.sdk';
+import { Audio } from 'expo-av';
+import * as Speech from 'expo-speech';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
-
 
 interface AgentProps {
   userName?: string;
   userId?: string;
   type?: string;
+  role?: string;
+  level?: string;
+  techstack?: string;
 }
 
 enum CallStatus {
@@ -19,84 +22,29 @@ enum CallStatus {
   FINISHED = 'FINISHED',
 }
 
+// Define the role type as a literal type
+type MessageRole = 'user' | 'system' | 'assistant';
+
+// Define the message interface
 interface SavedMessage {
-  role: 'user' | 'system' | 'assistant';
+  role: MessageRole;
   content: string;
 }
 
-const Agent = ({ userName, userId, type }: AgentProps) => {
+const Agent = ({ userName, userId, type = 'technical', role = 'Software Developer', level = 'Mid', techstack = 'React, TypeScript, Node.js' }: AgentProps) => {
   const router = useRouter();
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [messages, setMessages] = useState<SavedMessage[]>([]);
   const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [interviewQuestions, setInterviewQuestions] = useState<string[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
-
-
-  useEffect(() => {
-    // Event handlers
-    const handleCallStart = () => setCallStatus(CallStatus.ACTIVE);
-    const handleCallEnd = () => setCallStatus(CallStatus.FINISHED);
-    const handleSpeechStart = () => setIsSpeaking(true);
-    const handleSpeechEnd = () => setIsSpeaking(false);
-    const handleMessage = (message: any) => {
-      if (message.type === 'transcript' && message.transcriptType === 'final') {
-        const newMessage = { role: message.role, content: message.transcript };
-        setMessages((prev) => [...prev, newMessage]);
-      }
-    };
-    const handleError = (error: any) => console.error('Vapi Error:', error);
-
-    // Bind event listeners
-    vapi.on('call-start', handleCallStart);
-    vapi.on('call-end', handleCallEnd);
-    vapi.on('speech-start', handleSpeechStart);
-    vapi.on('speech-end', handleSpeechEnd);
-    vapi.on('message', handleMessage);
-    vapi.on('error', handleError);
-
-    // Cleanup function to unbind event listeners
-    return () => {
-      vapi.off('call-start', handleCallStart);
-      vapi.off('call-end', handleCallEnd);
-      vapi.off('speech-start', handleSpeechStart);
-      vapi.off('speech-end', handleSpeechEnd);
-      vapi.off('message', handleMessage);
-      vapi.off('error', handleError);
-    };
-  }, []);
-
-
-
-
-  useEffect(() => {
-    if (callStatus === CallStatus.FINISHED) {
-      router.push('/home');
-    }
-  }, [callStatus, router]);
-
-  // const messages = [
-  //   'What is your name?',
-  //   'My name is John Doe. Nice to meet you.',
-  // ];
-
-  useEffect(() => {
-    if (callStatus === CallStatus.ACTIVE) {
-      activateKeepAwakeAsync();
-    } else {
-      deactivateKeepAwake();
-    }
-
-    return () => {
-      deactivateKeepAwake();
-    };
-  }, [callStatus]);
-
-
-  const lastMessage = messages[messages.length - 1];
-  const [callId, setCallId] = useState<string | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
+  // Handle speaking animation
   useEffect(() => {
     const pulse = Animated.sequence([
       Animated.timing(pulseAnim, {
@@ -113,38 +61,243 @@ const Agent = ({ userName, userId, type }: AgentProps) => {
 
     if (isSpeaking) {
       Animated.loop(pulse).start();
+    } else {
+      pulseAnim.setValue(1);
     }
 
     return () => pulseAnim.setValue(1);
   }, [isSpeaking]);
 
+  // Handle message fade animation
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 500,
-      useNativeDriver: true,
-    }).start();
+    if (messages.length > 0) {
+      fadeAnim.setValue(0);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [messages]);
 
-    return () => fadeAnim.setValue(0);
-  }, [lastMessage]);
+  // Keep screen awake during active call
+  useEffect(() => {
+    if (callStatus === CallStatus.ACTIVE) {
+      activateKeepAwakeAsync();
+    } else {
+      deactivateKeepAwake();
+    }
 
+    return () => {
+      deactivateKeepAwake();
+    };
+  }, [callStatus]);
+
+  // Navigate away when call is finished
+  useEffect(() => {
+    if (callStatus === CallStatus.FINISHED) {
+      router.push('/home');
+    }
+  }, [callStatus, router]);
+
+  // Add a message to the messages array
+  const addMessage = (role: MessageRole, content: string) => {
+    const newMessage: SavedMessage = { role, content };
+    setMessages(prev => [...prev, newMessage]);
+  };
+
+  // Fetch interview questions using fetch instead of axios
+  const fetchInterviewQuestions = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('https://prepvault-1rdj.onrender.com/gemini/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type,
+          role,
+          level,
+          techstack,
+          amount: 5, // Request 5 questions
+          userid: userId || 'anonymous'
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Add welcome message
+        addMessage('assistant', `Hello ${userName || 'there'}! I'll be your AI interviewer today for this ${role} position. Let's get started with some questions.`);
+
+        // Get questions from the response
+        let questions: string[] = [];
+        if (data.questions && Array.isArray(data.questions)) {
+          questions = data.questions;
+        } else {
+          // Fallback questions if server doesn't return the expected format
+          questions = [
+            "Tell me about your experience with React and TypeScript.",
+            "How do you approach debugging complex issues?",
+            "Describe a challenging project you worked on recently.",
+            "How do you stay updated with the latest technologies?",
+            "Do you have any questions for me about the role?"
+          ];
+        }
+
+        setInterviewQuestions(questions);
+        setCallStatus(CallStatus.ACTIVE);
+
+        // Start the interview after a short delay
+        setTimeout(() => {
+          askNextQuestion();
+        }, 1000);
+      } else {
+        throw new Error('Failed to generate interview questions');
+      }
+    } catch (error) {
+      console.error('Error fetching interview questions:', error);
+      Alert.alert(
+        'Error',
+        'Failed to generate interview questions. Please try again.',
+        [{ text: 'OK', onPress: () => setCallStatus(CallStatus.INACTIVE) }]
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Start the interview
   const handleCallButton = async () => {
-    if (isCallInactiveOrFinished) {
+    if (callStatus === CallStatus.INACTIVE || callStatus === CallStatus.FINISHED) {
       setCallStatus(CallStatus.CONNECTING);
+
       try {
-        await vapi.start(process.env.EXPO_PUBLIC_VAPI_ASSISTANT_ID!);
+        // Request audio recording permissions
+        const { status } = await Audio.requestPermissionsAsync();
+        if (status !== 'granted') {
+          console.error('Audio recording permissions not granted');
+          setCallStatus(CallStatus.INACTIVE);
+          Alert.alert('Permission Required', 'Microphone permission is needed for the interview.');
+          return;
+        }
+
+        // Configure audio mode
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+        });
+
+        // Fetch interview questions
+        await fetchInterviewQuestions();
       } catch (error) {
         console.error('Error starting call:', error);
-        setCallStatus(CallStatus.FINISHED);
+        setCallStatus(CallStatus.INACTIVE);
+        Alert.alert('Error', 'Failed to start the interview. Please try again.');
       }
     }
   };
 
-  const handleEndCall = async () => {
-    setCallStatus(CallStatus.FINISHED);
-    vapi.stop();
+  // Ask the next interview question
+  const askNextQuestion = async () => {
+    if (currentQuestionIndex < interviewQuestions.length) {
+      const question = interviewQuestions[currentQuestionIndex];
+
+      // Add question to messages
+      addMessage('assistant', question);
+
+      // Speak the question
+      setIsSpeaking(true);
+      await Speech.speak(question, {
+        onDone: () => {
+          setIsSpeaking(false);
+          startListening();
+        },
+        onError: (error) => {
+          console.error('Speech error:', error);
+          setIsSpeaking(false);
+          startListening();
+        }
+      });
+    } else {
+      // End of interview
+      const finalMessage = "Thank you for completing the interview. Your responses have been recorded. We'll now return to the home screen.";
+      addMessage('assistant', finalMessage);
+
+      setIsSpeaking(true);
+      await Speech.speak(finalMessage, {
+        onDone: () => {
+          setIsSpeaking(false);
+          setTimeout(() => setCallStatus(CallStatus.FINISHED), 2000);
+        }
+      });
+    }
   };
 
+  // Start listening for user's answer
+  const startListening = async () => {
+    try {
+      const recording = new Audio.Recording();
+      await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      await recording.startAsync();
+      setRecording(recording);
+
+      // For demo purposes, automatically stop recording after 10 seconds
+      setTimeout(() => stopListening(), 10000);
+    } catch (error) {
+      console.error('Failed to start recording:', error);
+      // Move to next question if recording fails
+      addMessage('user', "Sorry, I couldn't record my answer. Let's move to the next question.");
+      setCurrentQuestionIndex(prev => prev + 1);
+      setTimeout(() => askNextQuestion(), 1500);
+    }
+  };
+
+  // Stop listening and process the user's answer
+  const stopListening = async () => {
+    if (!recording) return;
+
+    try {
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setRecording(null);
+
+      // In a real app, you would send this audio to a speech-to-text service
+      // For demo purposes, we'll just use a mock response
+      const mockTranscript = "This is a simulated response from the user. In a real app, this would be the transcribed text from the audio recording.";
+
+      // Add user response to messages
+      addMessage('user', mockTranscript);
+
+      // Move to next question
+      setCurrentQuestionIndex(prev => prev + 1);
+      setTimeout(() => askNextQuestion(), 1500);
+    } catch (error) {
+      console.error('Failed to stop recording:', error);
+      // Move to next question if processing fails
+      addMessage('user', "Sorry, I couldn't process my answer. Let's move to the next question.");
+      setCurrentQuestionIndex(prev => prev + 1);
+      setTimeout(() => askNextQuestion(), 1500);
+    }
+  };
+
+  // End the interview
+  const handleEndCall = async () => {
+    if (recording) {
+      try {
+        await recording.stopAndUnloadAsync();
+        setRecording(null);
+      } catch (error) {
+        console.error('Error stopping recording:', error);
+      }
+    }
+
+    Speech.stop();
+    setCallStatus(CallStatus.FINISHED);
+  };
 
   const latestMessage = messages[messages.length - 1]?.content;
   const isCallInactiveOrFinished = callStatus === CallStatus.INACTIVE || callStatus === CallStatus.FINISHED;
@@ -163,7 +316,7 @@ const Agent = ({ userName, userId, type }: AgentProps) => {
           <View style={tw`flex items-center justify-center`}>
             <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
               <Image
-                source={require('../public/ai-avatar.png')}
+                source={require('../assets/ai-avatar.png')}
                 style={tw`w-16 h-16`}
                 resizeMode="contain"
               />
@@ -175,11 +328,11 @@ const Agent = ({ userName, userId, type }: AgentProps) => {
         {/* User Card */}
         <View style={tw`flex-1 bg-[#1e293b] rounded-xl p-6 items-center`}>
           <Image
-            source={require('../public/user-avatar.png')}
+            source={require('../assets/user-avatar.png')}
             style={tw`w-16 h-16 rounded-full`}
             resizeMode="cover"
           />
-          <Text style={tw`text-white text-lg mt-4`}>{userName}</Text>
+          <Text style={tw`text-white text-lg mt-4`}>{userName || 'User'}</Text>
         </View>
       </View>
 
@@ -202,12 +355,15 @@ const Agent = ({ userName, userId, type }: AgentProps) => {
         {callStatus !== CallStatus.ACTIVE ? (
           <TouchableOpacity
             onPress={handleCallButton}
-            style={tw`bg-[#6366f1] py-3 px-6 rounded-lg`}
+            disabled={isLoading}
+            style={tw`${isLoading ? 'bg-gray-600' : 'bg-[#6366f1]'} py-3 px-6 rounded-lg`}
           >
             <Text style={tw`text-white text-lg font-semibold`}>
               {isCallInactiveOrFinished
-                ? 'Call'
-                : '. . .'}
+                ? 'Start Interview'
+                : isLoading
+                  ? 'Preparing...'
+                  : 'Connecting...'}
             </Text>
           </TouchableOpacity>
         ) : (
@@ -215,7 +371,7 @@ const Agent = ({ userName, userId, type }: AgentProps) => {
             onPress={handleEndCall}
             style={tw`bg-red-500 py-3 px-6 rounded-lg`}
           >
-            <Text style={tw`text-white text-lg font-semibold`}>End</Text>
+            <Text style={tw`text-white text-lg font-semibold`}>End Interview</Text>
           </TouchableOpacity>
         )}
       </View>

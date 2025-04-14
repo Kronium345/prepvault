@@ -31,7 +31,7 @@ export default function Home() {
         </View>
 
         <Image
-          source={require('../public/robot.png')}
+          source={require('../assets/robot.png')}
           style={styles.robotImage}
           resizeMode="contain"
         />
