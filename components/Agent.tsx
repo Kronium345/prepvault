@@ -6,6 +6,32 @@ import { Audio } from 'expo-av';
 import * as Speech from 'expo-speech';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 
+// Upload the recorded audio to backend to transcribe
+const uploadRecording = async (uri: string | null) => {
+  const formData = new FormData();
+  formData.append('file', {
+    uri,
+    type: 'audio/m4a', // or whatever your format is
+    name: 'recording.m4a',
+  } as any);
+
+  try {
+    const response = await fetch('https://prepvault-1rdj.onrender.com/gemini/transcribe', {
+      method: 'POST',
+      headers: {
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+    return data.transcript; // ✅ return the transcript
+  } catch (error) {
+    console.error('Failed to upload recording:', error);
+    return null;
+  }
+};
+
+
 interface AgentProps {
   userName?: string;
   userId?: string;
@@ -257,39 +283,41 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
   };
 
   // Stop listening and process the user's answer
-  // Stop listening and process the user's answer
   const stopListening = async () => {
     if (!recording) return;
 
     try {
       await recording.stopAndUnloadAsync();
-      const uri = recording.getURI(); // This would normally be used to send the audio to STT
+      const uri = recording.getURI();
       setRecording(null);
 
-      // 🔵 Simulate a transcript (replace with real STT later if you want)
-      const transcript = "This is a placeholder response.";
+      const transcript = await uploadRecording(uri);
 
-      // Add user's response to messages
-      addMessage('user', transcript);
+      if (transcript) {
+        // If transcript is successfully received
+        addMessage('user', transcript);
 
-      // ✅ Analyze the user's answer using Gemini
-      const feedbackResponse = await fetch('https://prepvault-1rdj.onrender.com/gemini/analyze-answer', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          question: interviewQuestions[currentQuestionIndex],
-          answer: transcript,
-        }),
-      });
+        // ✅ Analyze the user's answer using Gemini
+        const feedbackResponse = await fetch('https://prepvault-1rdj.onrender.com/gemini/analyze-answer', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            question: interviewQuestions[currentQuestionIndex],
+            answer: transcript,
+          }),
+        });
 
-      const feedbackData = await feedbackResponse.json();
-      if (feedbackData.success) {
-        // Add Gemini feedback as a new assistant message
-        addMessage('assistant', feedbackData.feedback);
+        const feedbackData = await feedbackResponse.json();
+        if (feedbackData.success) {
+          addMessage('assistant', feedbackData.feedback);
+        } else {
+          console.warn('Failed to get feedback:', feedbackData.error);
+        }
       } else {
-        console.warn('Failed to get feedback:', feedbackData.error);
+        // 🚨 If transcript is null (upload failed)
+        addMessage('user', "Sorry, I couldn't process my answer. Let's move to the next question.");
       }
 
       // Move to next question after a short delay
@@ -302,6 +330,7 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
       setTimeout(() => askNextQuestion(), 1500);
     }
   };
+
 
 
   // End the interview
