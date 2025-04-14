@@ -66,6 +66,8 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
   const [interviewQuestions, setInterviewQuestions] = useState<string[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isWaitingForAnswer, setIsWaitingForAnswer] = useState(false);
+
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -131,6 +133,12 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
     const newMessage: SavedMessage = { role, content };
     setMessages(prev => [...prev, newMessage]);
   };
+
+  const handleStartAnswering = async () => {
+    setIsWaitingForAnswer(false); // Hide the button once clicked
+    await startListening(); // 🔥 Actually start recording now
+  };
+
 
   // Fetch interview questions using fetch instead of axios
   const fetchInterviewQuestions = async () => {
@@ -240,12 +248,12 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
       await Speech.speak(question, {
         onDone: () => {
           setIsSpeaking(false);
-          startListening();
+          setIsWaitingForAnswer(true);
         },
         onError: (error) => {
           console.error('Speech error:', error);
           setIsSpeaking(false);
-          startListening();
+          setIsWaitingForAnswer(true);
         }
       });
     } else {
@@ -266,21 +274,30 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
   // Start listening for user's answer
   const startListening = async () => {
     try {
-      const recording = new Audio.Recording();
-      await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-      await recording.startAsync();
-      setRecording(recording);
+      // 🛡️ If there is an existing recording, unload it first
+      if (recording) {
+        console.log('Unloading previous recording...');
+        await recording.stopAndUnloadAsync();
+        setRecording(null);
+      }
+
+      const newRecording = new Audio.Recording();
+      await newRecording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      await newRecording.startAsync();
+      setRecording(newRecording);
+
+      console.log('Started new recording');
 
       // For demo purposes, automatically stop recording after 10 seconds
       setTimeout(() => stopListening(), 10000);
     } catch (error) {
       console.error('Failed to start recording:', error);
-      // Move to next question if recording fails
       addMessage('user', "Sorry, I couldn't record my answer. Let's move to the next question.");
       setCurrentQuestionIndex(prev => prev + 1);
       setTimeout(() => askNextQuestion(), 1500);
     }
   };
+
 
   // Stop listening and process the user's answer
   const stopListening = async () => {
@@ -440,6 +457,15 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
           </TouchableOpacity>
         )}
       </View>
+
+      {isWaitingForAnswer && (
+        <TouchableOpacity
+          onPress={handleStartAnswering}
+          style={tw`bg-green-500 py-3 px-6 rounded-lg mt-4`}
+        >
+          <Text style={tw`text-white text-lg font-semibold`}>Start Answering</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
