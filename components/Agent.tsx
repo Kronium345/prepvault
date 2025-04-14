@@ -150,9 +150,7 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
         setCallStatus(CallStatus.ACTIVE);
 
         // Start the interview after a short delay
-        setTimeout(() => {
-          askNextQuestion();
-        }, 1000);
+
       } else {
         throw new Error('Failed to generate interview questions');
       }
@@ -190,6 +188,9 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
           shouldDuckAndroid: true,
           playThroughEarpieceAndroid: false,
         });
+
+        addMessage('assistant', `Hello ${userName || 'there'}! I'll be your AI interviewer today for this ${role} position. Let's get started with some questions.`);
+
 
         // Fetch interview questions
         await fetchInterviewQuestions();
@@ -257,32 +258,52 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
   };
 
   // Stop listening and process the user's answer
+  // Stop listening and process the user's answer
   const stopListening = async () => {
     if (!recording) return;
 
     try {
       await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
+      const uri = recording.getURI(); // This would normally be used to send the audio to STT
       setRecording(null);
 
-      // In a real app, you would send this audio to a speech-to-text service
-      // For demo purposes, we'll just use a mock response
-      const mockTranscript = "This is a simulated response from the user. In a real app, this would be the transcribed text from the audio recording.";
+      // 🔵 Simulate a transcript (replace with real STT later if you want)
+      const transcript = "This is a placeholder response.";
 
-      // Add user response to messages
-      addMessage('user', mockTranscript);
+      // Add user's response to messages
+      addMessage('user', transcript);
 
-      // Move to next question
+      // ✅ Analyze the user's answer using Gemini
+      const feedbackResponse = await fetch('https://prepvault-1rdj.onrender.com/gemini/analyze-answer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question: interviewQuestions[currentQuestionIndex],
+          answer: transcript,
+        }),
+      });
+
+      const feedbackData = await feedbackResponse.json();
+      if (feedbackData.success) {
+        // Add Gemini feedback as a new assistant message
+        addMessage('assistant', feedbackData.feedback);
+      } else {
+        console.warn('Failed to get feedback:', feedbackData.error);
+      }
+
+      // Move to next question after a short delay
       setCurrentQuestionIndex(prev => prev + 1);
-      setTimeout(() => askNextQuestion(), 1500);
+      setTimeout(() => askNextQuestion(), 3000); // Slight delay to let user read feedback
     } catch (error) {
       console.error('Failed to stop recording:', error);
-      // Move to next question if processing fails
       addMessage('user', "Sorry, I couldn't process my answer. Let's move to the next question.");
       setCurrentQuestionIndex(prev => prev + 1);
       setTimeout(() => askNextQuestion(), 1500);
     }
   };
+
 
   // End the interview
   const handleEndCall = async () => {
@@ -301,6 +322,22 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
 
   const latestMessage = messages[messages.length - 1]?.content;
   const isCallInactiveOrFinished = callStatus === CallStatus.INACTIVE || callStatus === CallStatus.FINISHED;
+
+  useEffect(() => {
+    if (interviewQuestions.length > 0 && callStatus === CallStatus.ACTIVE) {
+      askNextQuestion();
+    }
+  }, [interviewQuestions, callStatus]);
+
+  if (isLoading) {
+    return (
+      <View style={tw`flex-1 items-center justify-center bg-black`}>
+        <Text style={tw`text-white text-xl font-semibold`}>Preparing Interview...</Text>
+      </View>
+    );
+  }
+
+
 
   return (
     <View style={tw`flex-1 bg-black p-4`}>
