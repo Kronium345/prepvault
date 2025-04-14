@@ -39,7 +39,7 @@ export const generateInterview = async (
 
     await db.collection('interviews').add(interview);
 
-    return res.status(200).json({ success: true });
+    return res.status(200).json({ success: true, questions: JSON.parse(questions) });
   } catch (error) {
     console.error('❌ Error generating interview:', error);
     return res.status(500).json({ success: false, error });

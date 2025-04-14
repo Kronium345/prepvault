@@ -109,6 +109,7 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
   // Fetch interview questions using fetch instead of axios
   const fetchInterviewQuestions = async () => {
     setIsLoading(true);
+
     try {
       const response = await fetch('https://prepvault-1rdj.onrender.com/gemini/generate', {
         method: 'POST',
@@ -120,42 +121,39 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
           role,
           level,
           techstack,
-          amount: 5, // Request 5 questions
-          userid: userId || 'anonymous'
+          amount: 5, // Number of questions
+          userid: userId || 'anonymous',
         }),
       });
 
+      // ✅ Check if the response is OK first
+      if (!response.ok) {
+        throw new Error(`Server responded with status ${response.status}`);
+      }
+
       const data = await response.json();
 
-      if (data.success) {
-        // Add welcome message
-        addMessage('assistant', `Hello ${userName || 'there'}! I'll be your AI interviewer today for this ${role} position. Let's get started with some questions.`);
-
-        // Get questions from the response
-        let questions: string[] = [];
-        if (data.questions && Array.isArray(data.questions)) {
-          questions = data.questions;
-        } else {
-          // Fallback questions if server doesn't return the expected format
-          questions = [
-            "Tell me about your experience with React and TypeScript.",
-            "How do you approach debugging complex issues?",
-            "Describe a challenging project you worked on recently.",
-            "How do you stay updated with the latest technologies?",
-            "Do you have any questions for me about the role?"
-          ];
-        }
-
-        setInterviewQuestions(questions);
+      if (data.success && data.questions && Array.isArray(data.questions)) {
+        // ✅ Correct real questions
+        setInterviewQuestions(data.questions);
         setCallStatus(CallStatus.ACTIVE);
-
-        // Start the interview after a short delay
-
       } else {
-        throw new Error('Failed to generate interview questions');
+        // ❌ If something is wrong, fallback to static questions
+        console.warn('Server response invalid, using fallback questions.');
+
+        const fallbackQuestions = [
+          "Tell me about your experience with React and TypeScript.",
+          "How do you approach debugging complex issues?",
+          "Describe a challenging project you worked on recently.",
+          "How do you stay updated with the latest technologies?",
+          "Do you have any questions for me about the role?"
+        ];
+
+        setInterviewQuestions(fallbackQuestions);
+        setCallStatus(CallStatus.ACTIVE);
       }
     } catch (error) {
-      console.error('Error fetching interview questions:', error);
+      console.error('❌ Error fetching interview questions:', error);
       Alert.alert(
         'Error',
         'Failed to generate interview questions. Please try again.',
@@ -165,6 +163,7 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
       setIsLoading(false);
     }
   };
+
 
   // Start the interview
   const handleCallButton = async () => {
