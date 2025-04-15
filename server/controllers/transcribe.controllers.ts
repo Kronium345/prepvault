@@ -5,7 +5,7 @@ import multer from 'multer';
 import { Request, Response } from 'express';
 
 const client = new SpeechClient({
-  keyFilename: path.join(__dirname, '../pharmaque-f7efdcd37a15.json'),
+  keyFilename: path.join(__dirname, '../../google-service-account.json'),
 });
 
 export const upload = multer({
