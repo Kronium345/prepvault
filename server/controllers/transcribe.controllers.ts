@@ -2,10 +2,23 @@ import { SpeechClient, protos } from '@google-cloud/speech';
 import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
+import { tmpdir } from 'os'; // ⬅️ new
+import { writeFileSync } from 'fs'; // ⬅️ new
 import { Request, Response } from 'express';
 
+// 🧠 Get the JSON string from environment
+const googleCredsRaw = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+
+if (!googleCredsRaw) {
+  throw new Error('GOOGLE_APPLICATION_CREDENTIALS_JSON is not set');
+}
+
+// ✍️ Write it to a temporary file so Google SDK can use it
+const tempKeyPath = path.join(tmpdir(), 'gcp-creds.json');
+writeFileSync(tempKeyPath, googleCredsRaw);
+
 const client = new SpeechClient({
-  keyFilename: path.resolve(process.env.GOOGLE_APPLICATION_CREDENTIALS!),
+  keyFilename: tempKeyPath,
 });
 
 export const upload = multer({
