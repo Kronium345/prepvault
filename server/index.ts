@@ -6,8 +6,12 @@ import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth';
 import vapiRoutes from './routes/vapi';
 import geminiRoutes from './routes/gemini';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
 const app = express();
-const PORT = 8082;
+const PORT = process.env.PORT || 8082;
 
 // ✅ Correct CORS setup for credentials + specific origin
 app.use(
