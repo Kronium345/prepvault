@@ -314,7 +314,7 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
       // Set a new timeout
       recordingTimeoutRef.current = setTimeout(() => {
         console.log('⏱️ Clearing previous timeout');
-        stopListening();
+        stopListening(newRecording);
       }, 10000);
 
     } catch (error) {
@@ -329,29 +329,28 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
 
 
   // Stop listening and process the user's answer
-  const stopListening = async () => {
+  const stopListening = async (localRecording?: Audio.Recording) => {
     if (recordingTimeoutRef.current) {
       console.log('🛑 Clearing recording timeout');
       clearTimeout(recordingTimeoutRef.current);
       recordingTimeoutRef.current = null;
     }
 
-    if (!recording) {
+    const activeRecording = localRecording || recording;
+    if (!activeRecording) {
       console.warn('❌ No active recording to stop.');
       return;
     }
 
     try {
-      if (recording.getStatusAsync) {
-        const status = await recording.getStatusAsync();
-        if (!status.isRecording && !status.isDoneRecording) {
-          console.warn('⚠️ Recording already stopped/unloaded.');
-          return;
-        }
+      const status = await activeRecording.getStatusAsync();
+      if (!status.isRecording && !status.isDoneRecording) {
+        console.warn('⚠️ Recording already stopped/unloaded.');
+        return;
       }
 
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
+      await activeRecording.stopAndUnloadAsync();
+      const uri = activeRecording.getURI();
       console.log('📂 Recorded file URI:', uri);
       setRecording(null);
 
@@ -393,6 +392,7 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
       setTimeout(() => askNextQuestion(), 1500);
     }
   };
+
 
 
 

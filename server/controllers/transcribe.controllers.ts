@@ -1,25 +1,30 @@
+import { SpeechClient, protos } from '@google-cloud/speech';
+import fs from 'fs';
+import path from 'path';
 import multer from 'multer';
 import { Request, Response } from 'express';
 
-// Setup multer
+const client = new SpeechClient({
+  keyFilename: path.join(__dirname, '../pharmaque-f7efdcd37a15.json'),
+});
+
 export const upload = multer({
   storage: multer.diskStorage({
-    destination: './uploads/', // saves to /uploads folder
+    destination: './uploads/',
     filename: (req, file, cb) => {
       cb(null, `${Date.now()}-${file.originalname}`);
     }
   }),
 });
-// Custom MulterRequest type
+
 interface MulterRequest extends Request {
   file?: Express.Multer.File;
 }
 
-// 🛠️ Important: NO return type from the controller
 export const transcribeAudio = async (req: Request, res: Response): Promise<void> => {
   try {
     const multerReq = req as MulterRequest;
-    const audioFile = multerReq.file; // multer already saved it to /uploads!
+    const audioFile = multerReq.file;
 
     if (!audioFile) {
       res.status(400).json({ success: false, message: 'No audio uploaded' });
@@ -28,13 +33,28 @@ export const transcribeAudio = async (req: Request, res: Response): Promise<void
 
     console.log('Saved audio file at:', audioFile.path);
 
-    // TODO: Send the audio file to Google STT here instead of mock
-    const mockTranscript = "This is a simulated transcription.";
+    const audioBytes = fs.readFileSync(audioFile.path).toString('base64');
 
-    res.status(200).json({ success: true, transcript: mockTranscript });
+    const audio = { content: audioBytes };
+    const config: protos.google.cloud.speech.v1.IRecognitionConfig = {
+      encoding: protos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding.ENCODING_UNSPECIFIED,
+      sampleRateHertz: 16000,
+      languageCode: 'en-US',
+    };
+
+    const request = { audio, config };
+
+    const [response] = await client.recognize(request);
+    const transcript = (response.results ?? [])
+      .map((result) =>
+        result.alternatives?.[0]?.transcript
+      )
+      .join(' ')
+      .trim();
+
+    res.status(200).json({ success: true, transcript });
   } catch (error) {
     console.error('Error transcribing audio:', error);
     res.status(500).json({ success: false, message: 'Failed to transcribe audio' });
   }
 };
-
