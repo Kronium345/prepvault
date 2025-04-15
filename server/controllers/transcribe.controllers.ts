@@ -13,9 +13,17 @@ if (!googleCredsRaw) {
   throw new Error('GOOGLE_APPLICATION_CREDENTIALS_JSON is not set');
 }
 
-// ✍️ Write it to a temporary file so Google SDK can use it
+// ✅ Fix newline escaping in the JSON string
+const fixedCreds = JSON.stringify(
+  JSON.parse(googleCredsRaw, (_, value) => {
+    return typeof value === 'string' ? value.replace(/\\n/g, '\n') : value;
+  })
+);
+
+// ✅ Write to a temp file
 const tempKeyPath = path.join(tmpdir(), 'gcp-creds.json');
-writeFileSync(tempKeyPath, googleCredsRaw);
+writeFileSync(tempKeyPath, fixedCreds);
+
 
 const client = new SpeechClient({
   keyFilename: tempKeyPath,
