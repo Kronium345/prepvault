@@ -36,5 +36,5 @@ yarn-error.*
 *.tsbuildinfo
 
 # Google Cloud service account
-google-service-account.json
+/server/google-service-account.json
 
