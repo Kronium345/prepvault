@@ -6,6 +6,8 @@ import { Audio } from 'expo-av';
 import * as Speech from 'expo-speech';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 
+
+
 // Upload the recorded audio to backend to transcribe
 const uploadRecording = async (uri: string | null) => {
   const formData = new FormData();
@@ -59,6 +61,7 @@ interface SavedMessage {
 
 const Agent = ({ userName, userId, type = 'technical', role = 'Software Developer', level = 'Mid', techstack = 'React, TypeScript, Node.js' }: AgentProps) => {
   const router = useRouter();
+  const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [messages, setMessages] = useState<SavedMessage[]>([]);
   const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
@@ -67,6 +70,8 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isWaitingForAnswer, setIsWaitingForAnswer] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
 
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -272,24 +277,46 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
   };
 
   // Start listening for user's answer
-  const startListening = async () => {
-    try {
-      // 🛡️ If there is an existing recording, unload it first
-      if (recording) {
+  const safelyUnloadRecording = async () => {
+    if (recording) {
+      try {
         console.log('Unloading previous recording...');
         await recording.stopAndUnloadAsync();
+      } catch (unloadError) {
+        console.warn('Previous recording already stopped or failed to unload:', unloadError);
+      } finally {
         setRecording(null);
       }
+    }
+  };
+
+  const startListening = async () => {
+    try {
+      console.log('🎧 startListening() triggered');
+      // 🛡️ FULLY unload first
+      await safelyUnloadRecording();
+      console.log('♻️ Previous recording safely unloaded');
 
       const newRecording = new Audio.Recording();
       await newRecording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
       await newRecording.startAsync();
       setRecording(newRecording);
 
-      console.log('Started new recording');
+      console.log('Started new recording ✅');
+      console.log('📡 Awaiting user input for 10 seconds...');
 
-      // For demo purposes, automatically stop recording after 10 seconds
-      setTimeout(() => stopListening(), 10000);
+      // Auto-stop after 10 seconds
+      // Cancel any existing timeout first
+      if (recordingTimeoutRef.current) {
+        clearTimeout(recordingTimeoutRef.current);
+      }
+
+      // Set a new timeout
+      recordingTimeoutRef.current = setTimeout(() => {
+        console.log('⏱️ Clearing previous timeout');
+        stopListening();
+      }, 10000);
+
     } catch (error) {
       console.error('Failed to start recording:', error);
       addMessage('user', "Sorry, I couldn't record my answer. Let's move to the next question.");
@@ -299,59 +326,80 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
   };
 
 
+
+
   // Stop listening and process the user's answer
   const stopListening = async () => {
-    if (!recording) return;
+    if (recordingTimeoutRef.current) {
+      console.log('🛑 Clearing recording timeout');
+      clearTimeout(recordingTimeoutRef.current);
+      recordingTimeoutRef.current = null;
+    }
+
+    if (!recording) {
+      console.warn('❌ No active recording to stop.');
+      return;
+    }
 
     try {
+      if (recording.getStatusAsync) {
+        const status = await recording.getStatusAsync();
+        if (!status.isRecording && !status.isDoneRecording) {
+          console.warn('⚠️ Recording already stopped/unloaded.');
+          return;
+        }
+      }
+
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
+      console.log('📂 Recorded file URI:', uri);
       setRecording(null);
 
+      if (!uri) {
+        console.warn('⚠️ No URI returned from recording.');
+        return;
+      }
+
+      setIsUploading(true);
       const transcript = await uploadRecording(uri);
+      setIsUploading(false);
 
       if (transcript) {
-        // If transcript is successfully received
         addMessage('user', transcript);
 
-        // ✅ Analyze the user's answer using Gemini
-        const feedbackResponse = await fetch('https://prepvault-1rdj.onrender.com/gemini/analyze-answer', {
+        const feedbackRes = await fetch('https://prepvault-1rdj.onrender.com/gemini/analyze-answer', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             question: interviewQuestions[currentQuestionIndex],
             answer: transcript,
           }),
         });
 
-        const feedbackData = await feedbackResponse.json();
+        const feedbackData = await feedbackRes.json();
         if (feedbackData.success) {
           addMessage('assistant', feedbackData.feedback);
-        } else {
-          console.warn('Failed to get feedback:', feedbackData.error);
         }
       } else {
-        // 🚨 If transcript is null (upload failed)
-        addMessage('user', "Sorry, I couldn't process my answer. Let's move to the next question.");
+        addMessage('user', 'Sorry, I couldn’t process my answer.');
       }
 
-      // Move to next question after a short delay
-      setCurrentQuestionIndex(prev => prev + 1);
-      setTimeout(() => askNextQuestion(), 3000); // Slight delay to let user read feedback
+      setCurrentQuestionIndex((prev) => prev + 1);
+      setTimeout(() => askNextQuestion(), 3000);
     } catch (error) {
-      console.error('Failed to stop recording:', error);
-      addMessage('user', "Sorry, I couldn't process my answer. Let's move to the next question.");
-      setCurrentQuestionIndex(prev => prev + 1);
+      console.error('❌ Failed to stop recording:', error);
+      addMessage('user', 'Something went wrong during recording.');
+      setCurrentQuestionIndex((prev) => prev + 1);
       setTimeout(() => askNextQuestion(), 1500);
     }
   };
 
 
 
+
   // End the interview
   const handleEndCall = async () => {
+    await safelyUnloadRecording();
     if (recording) {
       try {
         await recording.stopAndUnloadAsync();
@@ -457,6 +505,13 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
           </TouchableOpacity>
         )}
       </View>
+
+      {recording && (
+        <Text style={tw`text-yellow-400 text-center mt-2`}>
+          🎙️ Recording... Speak now.
+        </Text>
+      )}
+
 
       {isWaitingForAnswer && (
         <TouchableOpacity
