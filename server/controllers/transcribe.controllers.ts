@@ -68,9 +68,16 @@ export const transcribeAudio = async (req: Request, res: Response): Promise<void
     console.log('🔊 Audio file read and converted to base64');
 
     const audio = { content: audioBytes };
+
+    // 🔍 Detect mimetype
+    const isWebm = audioFile.mimetype === 'audio/webm';
+
+    // ✅ Dynamically set config
     const config: protos.google.cloud.speech.v1.IRecognitionConfig = {
-      encoding: protos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding.LINEAR16,
-      sampleRateHertz: 48000,
+      encoding: isWebm
+        ? protos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding.WEBM_OPUS
+        : protos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding.ENCODING_UNSPECIFIED, // Let Google decide for .m4a
+      sampleRateHertz: isWebm ? 48000 : undefined, // undefined lets it auto-detect
       languageCode: 'en-US',
     };
 
