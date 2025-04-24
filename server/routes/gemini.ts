@@ -7,6 +7,6 @@ const router = express.Router();
 
 router.post('/generate', generateInterview);
 router.post('/analyze-answer', analyzeAnswer);
-router.post('/transcribe', upload.single('file'), transcribeAudio);
+router.post('/transcribe', upload.any(), transcribeAudio);
 
 export default router;

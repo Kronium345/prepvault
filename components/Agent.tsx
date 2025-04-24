@@ -5,6 +5,7 @@ import tw from 'twrnc';
 import { Audio } from 'expo-av';
 import * as Speech from 'expo-speech';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
+import * as FileSystem from 'expo-file-system';
 
 
 
@@ -15,17 +16,27 @@ const uploadRecording = async (uri: string | null) => {
     return null;
   }
 
+  // ✅ Validate file existence with expo-file-system
+  const fileInfo = await FileSystem.getInfoAsync(uri);
+  console.log('📁 File exists:', fileInfo.exists, 'URI:', uri);
+  if (!fileInfo.exists) {
+    console.error('❌ File does not exist at:', uri);
+    return null;
+  }
+
   // Fix for iOS file URIs
   const formattedUri = Platform.OS === 'ios' ? uri.replace('file://', '') : uri;
 
   const formData = new FormData();
-  formData.append('file', {
-    uri,
-    type: 'audio/m4a', // or whatever your format is
+  const fileObj = {
+    uri: formattedUri,
+    type: 'audio/m4a',
     name: 'recording.m4a',
-  } as any);
+  };
 
-  console.log('📡 Uploading audio to backend:', uri);
+  formData.append('file', fileObj as any);
+
+  console.log('📤 File object to upload:', fileObj);
 
   try {
     const response = await fetch('https://prepvault-1rdj.onrender.com/gemini/transcribe', {
