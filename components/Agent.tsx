@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Image, View, Text, Animated, TouchableOpacity, Alert } from 'react-native';
+import { Image, View, Text, Animated, TouchableOpacity, Alert, Platform } from 'react-native';
 import tw from 'twrnc';
 import { Audio } from 'expo-av';
 import * as Speech from 'expo-speech';
@@ -10,6 +10,14 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 
 // Upload the recorded audio to backend to transcribe
 const uploadRecording = async (uri: string | null) => {
+  if (!uri) {
+    console.error('No URI provided to upload.');
+    return null;
+  }
+
+  // Fix for iOS file URIs
+  const formattedUri = Platform.OS === 'ios' ? uri.replace('file://', '') : uri;
+
   const formData = new FormData();
   formData.append('file', {
     uri,
@@ -17,15 +25,16 @@ const uploadRecording = async (uri: string | null) => {
     name: 'recording.m4a',
   } as any);
 
+  console.log('📡 Uploading audio to backend:', uri);
+
   try {
     const response = await fetch('https://prepvault-1rdj.onrender.com/gemini/transcribe', {
       method: 'POST',
-      headers: {
-      },
       body: formData,
     });
 
     const data = await response.json();
+    console.log('✅ Transcription result:', data);
     return data.transcript; // ✅ return the transcript
   } catch (error) {
     console.error('Failed to upload recording:', error);

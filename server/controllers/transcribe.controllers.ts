@@ -52,6 +52,10 @@ export const transcribeAudio = async (req: Request, res: Response): Promise<void
     const multerReq = req as MulterRequest;
     const audioFile = multerReq.file;
 
+    console.log('📥 Incoming request headers:', req.headers);
+    console.log('🗂️ Multer received file:', multerReq.file);
+
+
     if (!audioFile) {
       console.error('❌ No audio file uploaded');  // ⬅️ **LOG: File missing**
       res.status(400).json({ success: false, message: 'No audio uploaded' });
