@@ -24,6 +24,10 @@ const fixedCreds = JSON.stringify(
 const tempKeyPath = path.join(tmpdir(), 'gcp-creds.json');
 writeFileSync(tempKeyPath, fixedCreds);
 
+console.log('🌍 GOOGLE_APPLICATION_CREDENTIALS_JSON loaded:', !!googleCredsRaw);
+console.log('🗂️ Temporary GCP Key Path:', tempKeyPath);
+
+
 
 const client = new SpeechClient({
   keyFilename: tempKeyPath,
@@ -44,10 +48,12 @@ interface MulterRequest extends Request {
 
 export const transcribeAudio = async (req: Request, res: Response): Promise<void> => {
   try {
+    console.log('🎙️ Transcription endpoint hit');  // ⬅️ **LOG: Endpoint called**
     const multerReq = req as MulterRequest;
     const audioFile = multerReq.file;
 
     if (!audioFile) {
+      console.error('❌ No audio file uploaded');  // ⬅️ **LOG: File missing**
       res.status(400).json({ success: false, message: 'No audio uploaded' });
       return;
     }
@@ -55,6 +61,7 @@ export const transcribeAudio = async (req: Request, res: Response): Promise<void
     console.log('Saved audio file at:', audioFile.path);
 
     const audioBytes = fs.readFileSync(audioFile.path).toString('base64');
+    console.log('🔊 Audio file read and converted to base64');  // ⬅️ **LOG: Base64 success**
 
     const audio = { content: audioBytes };
     const config: protos.google.cloud.speech.v1.IRecognitionConfig = {
@@ -63,9 +70,13 @@ export const transcribeAudio = async (req: Request, res: Response): Promise<void
       languageCode: 'en-US',
     };
 
+    console.log('📝 Recognition config prepared:', config);  // ⬅️ **LOG: Config ready**
+
     const request = { audio, config };
+    console.log('📡 Sending request to Google Speech API');  // ⬅️ **LOG: Sending request**
 
     const [response] = await client.recognize(request);
+    console.log('📡 Response received from Google Speech API');  // ⬅️ **LOG: Response received**
     const transcript = (response.results ?? [])
       .map((result) =>
         result.alternatives?.[0]?.transcript
@@ -73,9 +84,13 @@ export const transcribeAudio = async (req: Request, res: Response): Promise<void
       .join(' ')
       .trim();
 
+    console.log('📝 Transcript generated:', transcript);  // ⬅️ **LOG: Transcript ready**
+
     res.status(200).json({ success: true, transcript });
+    console.log('✅ Transcription successful');  // ⬅️ **LOG: Transcription successful**
   } catch (error) {
     console.error('Error transcribing audio:', error);
+    console.log('❌ Transcription failed');  // ⬅️ **LOG: Transcription failed**
     res.status(500).json({ success: false, message: 'Failed to transcribe audio' });
   }
 };

@@ -4,6 +4,10 @@ import { generateText } from 'ai';
 
 export const analyzeAnswer = async (req: Request, res: Response): Promise<any> => {
     const { question, answer } = req.body;
+    console.log('📡 Analyzing answer request received');  // ⬅️ **LOG: Endpoint hit**
+    console.log('Question:', question);  // ⬅️ **LOG: Question received**
+    console.log('Answer:', answer);  // ⬅️ **LOG: Answer received**
+
 
     try {
         const { text: feedback } = await generateText({
