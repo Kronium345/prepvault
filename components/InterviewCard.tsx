@@ -5,6 +5,19 @@ import { useRouter } from 'expo-router';
 import dayjs from 'dayjs';
 import { getRandomInterviewCover } from '../lib/utils';
 import DisplayTechIcons from './DisplayTechIcons';
+// Updating svg imports
+import CalendarIcon from '../assets/calendar.svg';
+import StarIcon from '../assets/star.svg';
+console.log('CalendarIcon Type:', typeof CalendarIcon); // should be 'function'
+console.log('CalendarIcon:', CalendarIcon); // should not be {}
+import { SvgUri } from 'react-native-svg';
+
+// import TestIcon from '../assets/test.svg';
+console.log('Interview Cover URL:', getRandomInterviewCover());
+
+
+
+
 
 interface InterviewCardProps {
   interviewId: string;
@@ -36,7 +49,8 @@ const InterviewCard = ({
   createdAt,
 }: InterviewCardProps) => {
   const router = useRouter();
-  const feedback: Feedback | null = null;
+  const feedback: Feedback | null = null as Feedback | null;
+
 
   const normalizedType = /mix/gi.test(type) ? 'Mixed' : type;
   const formattedDate = dayjs(feedback?.createdAt || createdAt).format(
@@ -62,16 +76,14 @@ const InterviewCard = ({
         />
         <Text style={styles.roleText}>{role} Interview</Text>
 
+
         <View style={styles.metaRow}>
           <View style={styles.metaItem}>
-            <Image
-              source={require('../assets/calendar.svg')}
-              style={styles.icon}
-            />
+            <CalendarIcon width={22} height={22} />
             <Text style={styles.metaText}>{formattedDate}</Text>
           </View>
           <View style={styles.metaItem}>
-            <Image source={require('../assets/star.svg')} style={styles.icon} />
+            <StarIcon width={22} height={22} />
             <Text style={styles.metaText}>
               {feedback?.totalScore ?? '---'}/100
             </Text>

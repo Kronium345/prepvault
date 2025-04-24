@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const techIconBaseURL = 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons';
+const techIconBaseURL = 'https://img.icons8.com/color/48';
 
 const normalizeTechName = (tech: string) => {
   const key = tech.toLowerCase().replace(/\.js$/, '').replace(/\s+/g, '');
@@ -27,14 +27,14 @@ export const getTechLogos = async (techArray: string[]) => {
     const normalized = normalizeTechName(tech);
     return {
       tech,
-      url: `${techIconBaseURL}/${normalized}/${normalized}-original.svg`,
+      url: `${techIconBaseURL}/${normalized}.png`,
     };
   });
 
   const results = await Promise.all(
     logoURLs.map(async ({ tech, url }) => ({
       tech,
-      url: (await checkIconExists(url)) ? url : '/tech.svg',
+      url: (await checkIconExists(url)) ? url : 'https://img.icons8.com/color/48/technology.png',
     }))
   );
 
@@ -43,5 +43,5 @@ export const getTechLogos = async (techArray: string[]) => {
 
 export const getRandomInterviewCover = () => {
   const randomIndex = Math.floor(Math.random() * interviewCovers.length);
-  return `/covers${interviewCovers[randomIndex]}`;
+  return interviewCovers[randomIndex];
 };

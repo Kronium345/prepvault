@@ -2,100 +2,110 @@
 // import { z } from "zod";
 
 export const mappings = {
-    "react.js": "react",
-    reactjs: "react",
-    react: "react",
-    "next.js": "nextjs",
-    nextjs: "nextjs",
-    next: "nextjs",
-    "vue.js": "vuejs",
-    vuejs: "vuejs",
-    vue: "vuejs",
-    "express.js": "express",
-    expressjs: "express",
-    express: "express",
+    // React Ecosystem
+    "react.js": "react-native",
+    reactjs: "react-native",
+    react: "react-native", // Icons8 uses "react-native"
+
+    // Next.js doesn't exist on Icons8
+    "next.js": "react-native",
+    nextjs: "react-native",
+    next: "react-native",
+
+    // Vue
+    "vue.js": "vue-js",
+    vuejs: "vue-js",
+    vue: "vue-js",
+
+    // Express - Icons8 uses "expressjs"
+    "express.js": "expressjs",
+    expressjs: "expressjs",
+    express: "expressjs",
+
+    // Node.js
     "node.js": "nodejs",
     nodejs: "nodejs",
     node: "nodejs",
+
     mongodb: "mongodb",
     mongo: "mongodb",
-    mongoose: "mongoose",
-    mysql: "mysql",
+
+    // SQL/Databases
+    mysql: "mysql-logo",
     postgresql: "postgresql",
     sqlite: "sqlite",
+    mongoose: "mongodb",
+
+    // Cloud / Infra
     firebase: "firebase",
     docker: "docker",
     kubernetes: "kubernetes",
-    aws: "aws",
-    azure: "azure",
-    gcp: "gcp",
+    aws: "amazon-web-services",
+    azure: "microsoft-azure",
+    gcp: "google-cloud",
     digitalocean: "digitalocean",
     heroku: "heroku",
-    photoshop: "photoshop",
-    "adobe photoshop": "photoshop",
-    html5: "html5",
-    html: "html5",
+
+    // Design Tools
+    photoshop: "adobe-photoshop",
+    "adobe photoshop": "adobe-photoshop",
+    figma: "figma",
+
+    // Frontend Core
+    html5: "html-5",
+    html: "html-5",
     css3: "css3",
     css: "css3",
     sass: "sass",
     scss: "sass",
-    less: "less",
-    tailwindcss: "tailwindcss",
-    tailwind: "tailwindcss",
+    tailwindcss: "tailwind-css",
+    tailwind: "tailwind-css",
     bootstrap: "bootstrap",
-    jquery: "jquery",
+
+    // JS Ecosystem
     typescript: "typescript",
     ts: "typescript",
     javascript: "javascript",
     js: "javascript",
-    "angular.js": "angular",
-    angularjs: "angular",
-    angular: "angular",
-    "ember.js": "ember",
-    emberjs: "ember",
-    ember: "ember",
-    "backbone.js": "backbone",
-    backbonejs: "backbone",
-    backbone: "backbone",
-    nestjs: "nestjs",
-    graphql: "graphql",
-    "graph ql": "graphql",
-    apollo: "apollo",
-    webpack: "webpack",
-    babel: "babel",
-    "rollup.js": "rollup",
-    rollupjs: "rollup",
-    rollup: "rollup",
-    "parcel.js": "parcel",
-    parceljs: "parcel",
-    npm: "npm",
-    yarn: "yarn",
+
+    // Frameworks
+    angular: "angularjs",
+    "angular.js": "angularjs",
+    angularjs: "angularjs",
+
+    // Version Control
     git: "git",
     github: "github",
     gitlab: "gitlab",
     bitbucket: "bitbucket",
-    figma: "figma",
-    prisma: "prisma",
+
+    // State Management / APIs
     redux: "redux",
-    flux: "flux",
-    redis: "redis",
-    selenium: "selenium",
-    cypress: "cypress",
+    graphql: "graphql",
+    apollo: "graphql",
+
+    // Build Tools
+    webpack: "webpack",
+    babel: "babel",
+    npm: "npm",
+    yarn: "yarn",
+
+    // Testing
     jest: "jest",
     mocha: "mocha",
-    chai: "chai",
-    karma: "karma",
-    vuex: "vuex",
-    "nuxt.js": "nuxt",
-    nuxtjs: "nuxt",
-    nuxt: "nuxt",
-    strapi: "strapi",
-    wordpress: "wordpress",
-    contentful: "contentful",
+    cypress: "cypress",
+
+    // Hosting / Deployment
     netlify: "netlify",
     vercel: "vercel",
-    "aws amplify": "amplify",
+
+    // CMS / Others
+    wordpress: "wordpress",
+    contentful: "contentful",
+    strapi: "strapi",
+    prisma: "prisma",
 };
+
 
 // export const interviewer: CreateAssistantDTO = {
 //   name: "Interviewer",
@@ -190,19 +200,17 @@ export const mappings = {
 // });
 
 export const interviewCovers = [
-    "/adobe.png",
-    "/amazon.png",
-    "/facebook.png",
-    "/hostinger.png",
-    "/pinterest.png",
-    "/quora.png",
-    "/reddit.png",
-    "/skype.png",
-    "/spotify.png",
-    "/telegram.png",
-    "/tiktok.png",
-    "/yahoo.png",
+    "https://img.icons8.com/color/96/000000/amazon.png",
+    "https://img.icons8.com/color/96/000000/facebook.png",
+    "https://img.icons8.com/color/96/000000/reddit.png",
+    "https://img.icons8.com/color/96/000000/skype.png",
+    "https://img.icons8.com/color/96/000000/spotify.png",
+    "https://img.icons8.com/color/96/000000/telegram-app.png",
+    "https://img.icons8.com/color/96/000000/tiktok.png",
+    "https://img.icons8.com/color/96/000000/yahoo.png",
 ];
+
+
 
 export interface Interview {
     id: string;

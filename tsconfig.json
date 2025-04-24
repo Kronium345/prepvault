@@ -12,7 +12,13 @@
     "types": [
       "react",
       "react-native"
-    ]
+    ],
+    "baseUrl": "./",
+    "paths": {
+      "*": [
+        "*"
+      ]
+    }
   },
   "extends": "expo/tsconfig.base"
 }
