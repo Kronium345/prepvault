@@ -70,7 +70,7 @@ export const transcribeAudio = async (req: Request, res: Response): Promise<void
     const audio = { content: audioBytes };
     const config: protos.google.cloud.speech.v1.IRecognitionConfig = {
       encoding: protos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding.LINEAR16,
-      sampleRateHertz: 16000,
+      sampleRateHertz: 48000,
       languageCode: 'en-US',
     };
 

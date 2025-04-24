@@ -92,6 +92,69 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
   const [isWaitingForAnswer, setIsWaitingForAnswer] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
+  const startListeningWeb = async () => {
+    console.log('🎧 startListeningWeb() triggered');
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    let recordedChunks: Blob[] = [];
+    const mediaRecorder = new MediaRecorder(stream);
+
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        recordedChunks.push(event.data);
+      }
+    };
+
+    mediaRecorder.onstop = async () => {
+      const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+      const file = new File([blob], 'recording.webm', { type: 'audio/webm' });
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      console.log('📤 Web Blob recorded:', file);
+
+      const response = await fetch('https://prepvault-1rdj.onrender.com/gemini/transcribe', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+      console.log('✅ Web Transcription result:', data);
+
+      if (data.transcript && data.transcript.trim() !== '') {
+        addMessage('user', data.transcript);
+
+        const feedbackRes = await fetch('https://prepvault-1rdj.onrender.com/gemini/analyze-answer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: interviewQuestions[currentQuestionIndex],
+            answer: data.transcript,
+          }),
+        });
+
+        const feedbackData = await feedbackRes.json();
+        if (feedbackData.success) {
+          addMessage('assistant', feedbackData.feedback);
+        }
+      } else {
+        console.warn('⚠️ Web Transcription was empty.');
+        addMessage('user', 'Sorry, I couldn’t process my answer.');
+      }
+
+      setCurrentQuestionIndex((prev: number) => prev + 1);
+      setTimeout(() => askNextQuestion(), 3000);
+    };
+
+    mediaRecorder.start();
+    console.log('🎙️ Web Recording started...');
+
+    setTimeout(() => {
+      mediaRecorder.stop();
+      console.log('🛑 Web Recording stopped.');
+    }, 10000);
+  };
 
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -161,8 +224,13 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
 
   const handleStartAnswering = async () => {
     setIsWaitingForAnswer(false); // Hide the button once clicked
-    await startListening(); // 🔥 Actually start recording now
+    if (Platform.OS === 'web') {
+      await startListeningWeb(); // 👈 Web-specific recorder
+    } else {
+      await startListening();    // 👈 Native recorder (expo-av)
+    }
   };
+
 
 
   // Fetch interview questions using fetch instead of axios
@@ -318,7 +386,31 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
       console.log('♻️ Previous recording safely unloaded');
 
       const newRecording = new Audio.Recording();
-      await newRecording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      await newRecording.prepareToRecordAsync({
+        android: {
+          extension: '.m4a',
+          outputFormat: 2,  // 2 = MPEG_4 in Expo AV
+          audioEncoder: 3,  // 3 = AAC in Expo AV
+          sampleRate: 44100,
+          numberOfChannels: 1,
+          bitRate: 128000,
+        },
+        ios: {
+          extension: '.m4a',
+          audioQuality: 127, // 127 = HIGH
+          sampleRate: 44100,
+          numberOfChannels: 1,
+          bitRate: 128000,
+          outputFormat: 2, // 2 = MPEG4AAC
+        },
+        web: {
+          mimeType: 'audio/webm',
+          bitsPerSecond: 128000,
+        },
+        isMeteringEnabled: true,
+      });
+
+
       await newRecording.startAsync();
       setRecording(newRecording);
 
@@ -335,7 +427,7 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
       recordingTimeoutRef.current = setTimeout(() => {
         console.log('⏱️ Clearing previous timeout');
         stopListening(newRecording);
-      }, 10000);
+      }, 15000);
 
     } catch (error) {
       console.error('Failed to start recording:', error);
@@ -364,6 +456,7 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
 
     try {
       const status = await activeRecording.getStatusAsync();
+      console.log('📏 Recording duration (ms):', status.durationMillis);
       if (!status.isRecording && !status.isDoneRecording) {
         console.warn('⚠️ Recording already stopped/unloaded.');
         return;
@@ -383,7 +476,8 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
       const transcript = await uploadRecording(uri);
       setIsUploading(false);
 
-      if (transcript) {
+      if (transcript && transcript.trim() !== '') {
+        console.log('📝 Non-empty transcript:', transcript);
         addMessage('user', transcript);
 
         const feedbackRes = await fetch('https://prepvault-1rdj.onrender.com/gemini/analyze-answer', {
@@ -400,6 +494,7 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
           addMessage('assistant', feedbackData.feedback);
         }
       } else {
+        console.warn('⚠️ Transcription was empty or silent.');
         addMessage('user', 'Sorry, I couldn’t process my answer.');
       }
 
