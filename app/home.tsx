@@ -4,8 +4,13 @@ import { Button } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import InterviewCard from '../components/InterviewCard';
 import { dummyInterviews } from '../constants';
+import { getCurrentUsers, getInterviewByCurrentUser } from '../lib/actions/auth.action';
 
-export default function Home() {
+export default async function Home() {
+  const user = await getCurrentUsers();
+  const userInterviews = await getInterviewByCurrentUser(user?.id!);
+
+  const hasPastInterviews = userInterviews && userInterviews.length > 0;
   const router = useRouter();
 
   return (
@@ -59,13 +64,18 @@ export default function Home() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Take an Interview</Text>
         <View style={styles.cardGrid}>
-          {dummyInterviews.map((interview) => (
-            <InterviewCard
-              {...interview}
-              interviewId={interview.id}
-              key={interview.id}
-            />
-          ))}
+          {
+            hasPastInterviews ? (
+              userInterviews?.map((interview) => (
+                <InterviewCard
+                  {...interview}
+                  interviewId={interview.id}
+                  key={interview.id}
+                />
+              ))) : (
+              <Text>No past interviews found</Text>
+            )
+          }
         </View>
       </View>
 

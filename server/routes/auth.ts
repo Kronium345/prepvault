@@ -173,4 +173,37 @@ router.get('/interview/user', async (req: Request, res: Response): Promise<any> 
   }
 });
 
+router.get('/interview/latest', async (req: Request, res: Response): Promise<any> => {
+  try {
+    const sessionCookie = req.cookies?.session || req.headers.authorization?.replace('Bearer ', '');
+    const limit = parseInt(req.query.limit as string) || 20;
+
+    if (!sessionCookie) {
+      return res.status(401).json({ success: false, message: 'No session token found' });
+    }
+
+    const decodedClaims = await auth.verifySessionCookie(sessionCookie, true);
+    const currentUserId = decodedClaims.uid;
+
+    const snapshot = await db
+      .collection('interviews')
+      .where('finalized', '==', true)
+      .where('userId', '!=', currentUserId)
+      .orderBy('userId') // Required to use '!='
+      .orderBy('createdAt', 'desc')
+      .limit(limit)
+      .get();
+
+    const interviews = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    return res.status(200).json({ success: true, interviews });
+  } catch (error) {
+    console.error('❌ Error fetching latest interviews:', error);
+    return res.status(500).json({ success: false, message: 'Failed to get latest interviews' });
+  }
+});
+
 export default router;
