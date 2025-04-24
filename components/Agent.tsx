@@ -143,8 +143,10 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
         addMessage('user', 'Sorry, I couldn’t process my answer.');
       }
 
-      setCurrentQuestionIndex((prev: number) => prev + 1);
-      setTimeout(() => askNextQuestion(), 3000);
+      setTimeout(() => {
+        setCurrentQuestionIndex((prev) => prev + 1);
+        askNextQuestion();
+      }, 10000); // Wait 5 seconds before AI feedback
     };
 
     mediaRecorder.start();
@@ -498,8 +500,10 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
         addMessage('user', 'Sorry, I couldn’t process my answer.');
       }
 
-      setCurrentQuestionIndex((prev) => prev + 1);
-      setTimeout(() => askNextQuestion(), 3000);
+      setTimeout(() => {
+        setCurrentQuestionIndex((prev) => prev + 1);
+        askNextQuestion();
+      }, 10000); // Wait 5 seconds before AI feedback
     } catch (error) {
       console.error('❌ Failed to stop recording:', error);
       addMessage('user', 'Something went wrong during recording.');

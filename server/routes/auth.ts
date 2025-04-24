@@ -142,4 +142,35 @@ router.get(
   }
 );
 
+router.get('/interview/user', async (req: Request, res: Response): Promise<any> => {
+  try {
+    const sessionCookie = req.cookies?.session || req.headers.authorization?.replace('Bearer ', '');
+
+    if (!sessionCookie) {
+      console.log('❌ No session cookie found');
+      return res.status(401).json({ success: false, message: 'No session cookie' });
+    }
+
+    const decodedClaims = await auth.verifySessionCookie(sessionCookie, true);
+    const userId = decodedClaims.uid;
+
+    console.log('🔑 Decoded userId for interview fetch:', userId);
+
+    const snapshot = await db.collection('interviews')
+      .where('userId', '==', userId)
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    const interviews = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    return res.status(200).json({ success: true, interviews });
+  } catch (error) {
+    console.error('❌ Error fetching interviews:', error);
+    return res.status(500).json({ success: false, message: 'Failed to fetch interviews' });
+  }
+});
+
 export default router;

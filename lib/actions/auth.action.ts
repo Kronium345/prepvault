@@ -88,3 +88,29 @@ export async function isAuthenticated() {
   // Trick to convert truth/false value into a boolean
   return !!user;
 }
+
+
+export async function getInterviewByCurrentUser(): Promise<Interview[] | null> {
+  try {
+    const session = await AsyncStorage.getItem('session');
+    if (!session) throw new Error('No session found');
+
+    const res = await fetch('https://prepvault-1rdj.onrender.com/auth/interview/user', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${session}`,
+      },
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data?.success) {
+      throw new Error(data.message || 'Failed to fetch interviews');
+    }
+
+    return data.interviews as Interview[];
+  } catch (err) {
+    console.error('Failed to fetch user interviews:', err);
+    return null;
+  }
+}
