@@ -116,10 +116,12 @@ export async function getInterviewByCurrentUser(userId: string): Promise<Intervi
 }
 
 
-export async function getLatestInterviews(limit = 20): Promise<Interview[] | null> {
+export async function getLatestInterviews(params: GetLatestInterviewsParams): Promise<Interview[] | null> {
   try {
     const session = await AsyncStorage.getItem('session');
     if (!session) return null;
+
+    const { limit } = params;
 
     const res = await fetch(`https://prepvault-1rdj.onrender.com/auth/interview/latest?limit=${limit}`, {
       method: 'GET',

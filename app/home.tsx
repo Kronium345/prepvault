@@ -1,17 +1,37 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 import { Button } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import InterviewCard from '../components/InterviewCard';
-import { dummyInterviews } from '../constants';
-import { getCurrentUsers, getInterviewByCurrentUser } from '../lib/actions/auth.action';
+import { getCurrentUsers, getInterviewByCurrentUser, getLatestInterviews } from '../lib/actions/auth.action';
 
-export default async function Home() {
-  const user = await getCurrentUsers();
-  const userInterviews = await getInterviewByCurrentUser(user?.id!);
+export default function Home() {
+  const [user, setUser] = useState<User | null>(null);
+  const [userInterviews, setUserInterviews] = useState<Interview[]>([]);
+  const [latestInterviews, setLatestInterviews] = useState<Interview[]>([]);
+  const router = useRouter();
+
+  useEffect(() => {
+    async function fetchData() {
+      const currentUser = await getCurrentUsers();
+      setUser(currentUser);
+
+      if (currentUser?.id) {
+        const [interviews, latest] = await Promise.all([
+          getInterviewByCurrentUser(currentUser.id),
+          getLatestInterviews({ userId: currentUser.id, limit: 20 })
+        ]);
+
+        setUserInterviews(interviews || []);
+        setLatestInterviews(latest || []);
+      }
+    }
+
+    fetchData();
+  }, []);
 
   const hasPastInterviews = userInterviews && userInterviews.length > 0;
-  const router = useRouter();
+  const hasUpcomingInterviews = latestInterviews && latestInterviews.length > 0;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -50,13 +70,19 @@ export default async function Home() {
           to provide feedback on your performance and help you improve.
         </Text>
         <View style={styles.cardGrid}>
-          {dummyInterviews.map((interview) => (
-            <InterviewCard
-              {...interview}
-              interviewId={interview.id}
-              key={interview.id}
-            />
-          ))}
+          {
+            hasPastInterviews ? (
+              userInterviews.map((interview) => (
+                <InterviewCard
+                  {...interview}
+                  interviewId={interview.id}
+                  key={interview.id}
+                />
+              ))
+            ) : (
+              <Text>No past interviews found</Text>
+            )
+          }
         </View>
       </View>
 
@@ -65,15 +91,16 @@ export default async function Home() {
         <Text style={styles.sectionTitle}>Take an Interview</Text>
         <View style={styles.cardGrid}>
           {
-            hasPastInterviews ? (
-              userInterviews?.map((interview) => (
+            hasUpcomingInterviews ? (
+              latestInterviews.map((interview) => (
                 <InterviewCard
                   {...interview}
                   interviewId={interview.id}
                   key={interview.id}
                 />
-              ))) : (
-              <Text>No past interviews found</Text>
+              ))
+            ) : (
+              <Text>There are no interviews available right now.</Text>
             )
           }
         </View>
