@@ -45,3 +45,49 @@ export const generateInterview = async (
     return res.status(500).json({ success: false, error });
   }
 };
+
+export const generateFeedback = async (req: Request, res: Response): Promise<any> => {
+  const { messages, role, level, techstack, type, userId } = req.body;
+
+  if (!messages || !userId) {
+    return res.status(400).json({ success: false, message: 'Missing required fields' });
+  }
+
+  try {
+    // 🔮 Use Gemini (or your AI service) to generate feedback from the messages
+    const { text: feedbackText } = await generateText({
+      model: google('gemini-2.0-pro'),
+      prompt: `You are an AI interview coach. Analyze the following interview conversation and generate detailed feedback based on communication skills, technical knowledge, problem solving, cultural fit, and confidence & clarity.
+
+Interview details:
+- Role: ${role}
+- Level: ${level}
+- Tech Stack: ${techstack}
+- Type: ${type}
+
+Conversation:
+${messages.map((msg: { role: string; content: string }) => `${msg.role}: ${msg.content}`).join('\n')}
+
+Provide feedback with a total score out of 100, category scores, strengths, areas for improvement, and a final assessment.`,
+    });
+
+    // Optionally parse feedbackText into structured data (e.g., using regex or JSON if the model returns JSON).
+
+    // 📝 Save feedback to Firestore
+    const feedbackDoc = await db.collection('feedback').add({
+      userId,
+      role,
+      level,
+      techstack,
+      type,
+      messages,
+      feedback: feedbackText,
+      createdAt: new Date().toISOString(),
+    });
+
+    return res.status(200).json({ success: true, id: feedbackDoc.id });
+  } catch (error) {
+    console.error('❌ Error generating feedback:', error);
+    return res.status(500).json({ success: false, message: 'Failed to generate feedback' });
+  }
+};

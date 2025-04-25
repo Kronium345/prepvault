@@ -293,6 +293,39 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
     }
   };
 
+  // Creating a handleGenerateFeedback function to supply feedback
+  const handleGenerateFeedback = async (messages: SavedMessage[]) => {
+    console.log('🔍 Generating feedback...');
+
+    try {
+      const response = await fetch('https://prepvault-1rdj.onrender.com/gemini/generate-feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages, // Send all the messages including user/assistant
+          role,
+          level,
+          techstack,
+          type,
+          userId
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.id) {
+        router.push(`/interview/${data.id}/feedback`);
+      } else {
+        console.error('❌ Failed to generate feedback:', data.message);
+        router.push('/home');
+      }
+    } catch (error) {
+      console.error('❌ Error generating feedback:', error);
+      router.push('/home');
+    }
+  };
+
+
 
   // Start the interview
   const handleCallButton = async () => {
@@ -317,7 +350,7 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
           playThroughEarpieceAndroid: false,
         });
 
-        addMessage('assistant', `Hello ${userName || 'there'}! I'll be your AI interviewer today for this ${role} position. Let's get started with some questions.`);
+        addMessage('assistant', `Hello ${userName || 'there'}! I'll be your AI interviewer today for this ${role} position. As a ${level}-level candidate, let's dive into some ${type} Let's get started with some questions.`);
 
 
         // Fetch interview questions
