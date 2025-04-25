@@ -71,13 +71,15 @@ export const transcribeAudio = async (req: Request, res: Response): Promise<void
 
     // 🔍 Detect mimetype
     const isWebm = audioFile.mimetype === 'audio/webm';
+    const isM4a = audioFile.mimetype === 'audio/m4a' || audioFile.mimetype === 'audio/mp4' || audioFile.originalname.endsWith('.m4a');
 
-    // ✅ Dynamically set config
+    // Explicitly set encoding for M4A (AAC) if needed
+
     const config: protos.google.cloud.speech.v1.IRecognitionConfig = {
       encoding: isWebm
         ? protos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding.WEBM_OPUS
-        : protos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding.ENCODING_UNSPECIFIED, // Let Google decide for .m4a
-      sampleRateHertz: isWebm ? 48000 : undefined, // undefined lets it auto-detect
+        : protos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding.ENCODING_UNSPECIFIED,
+      sampleRateHertz: isWebm ? 48000 : 44100, // 44100Hz is standard for mobile .m4a
       languageCode: 'en-US',
     };
 

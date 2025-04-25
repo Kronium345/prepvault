@@ -3,9 +3,27 @@ import { View, Text, ActivityIndicator, ScrollView } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import tw from 'twrnc';
 
+interface CategoryScore {
+    name: string;
+    score: number;
+    comment: string;
+}
+
+interface FeedbackData {
+    totalScore: number;
+    categoryScores: CategoryScore[];
+    strengths: string[];
+    areasForImprovement: string[];
+    finalAssessment: string;
+}
+
+interface Feedback extends FeedbackData {
+    // Add any additional properties specific to the Feedback interface
+}
+
 const FeedbackPage = () => {
     const { id } = useLocalSearchParams();
-    const [feedback, setFeedback] = useState(null);
+    const [feedback, setFeedback] = useState<Feedback | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {

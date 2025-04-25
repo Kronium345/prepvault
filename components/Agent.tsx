@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Image, View, Text, Animated, TouchableOpacity, Alert, Platform } from 'react-native';
+import { Image, View, Text, Animated, TouchableOpacity, Alert, Platform, ScrollView } from 'react-native';
 import tw from 'twrnc';
 import { Audio } from 'expo-av';
 import * as Speech from 'expo-speech';
@@ -146,7 +146,7 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
       setTimeout(() => {
         setCurrentQuestionIndex((prev) => prev + 1);
         askNextQuestion();
-      }, 10000); // Wait 5 seconds before AI feedback
+      }, 40000); // Wait 5 seconds before AI feedback
     };
 
     mediaRecorder.start();
@@ -588,7 +588,7 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
 
 
   return (
-    <View style={tw`flex-1 bg-black p-4`}>
+    <ScrollView style={tw`flex-1 bg-black p-4`} contentContainerStyle={tw`p-4 pb-10`}>
       {/* Header */}
       <Text style={tw`text-white text-2xl font-semibold mb-6`}>
         Interview Generation
@@ -671,12 +671,12 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
       {isWaitingForAnswer && (
         <TouchableOpacity
           onPress={handleStartAnswering}
-          style={tw`bg-green-500 py-3 px-6 rounded-lg mt-4`}
+          style={tw`bg-green-500 py-4 px-8 rounded-2xl mt-6 shadow-lg border border-green-400 flex justify-center items-center`}
         >
-          <Text style={tw`text-white text-lg font-semibold`}>Start Answering</Text>
+          <Text style={tw`text-white text-lg font-bold tracking-wide`}>Start Answering</Text>
         </TouchableOpacity>
       )}
-    </View>
+    </ScrollView>
   );
 };
 
