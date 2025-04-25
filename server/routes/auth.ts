@@ -189,7 +189,7 @@ router.get('/interview/latest', async (req: Request, res: Response): Promise<any
       .collection('interviews')
       .where('finalized', '==', true)
       .where('userId', '!=', currentUserId)
-      .orderBy('userId') // Required to use '!='
+      .orderBy('userId')
       .orderBy('createdAt', 'desc')
       .limit(limit)
       .get();
