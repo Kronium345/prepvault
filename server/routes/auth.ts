@@ -206,4 +206,43 @@ router.get('/interview/latest', async (req: Request, res: Response): Promise<any
   }
 });
 
+// ✅ GET /auth/interview/:id
+router.get('/interview/:id', async (req: Request, res: Response): Promise<any> => {
+  try {
+    const sessionCookie = req.cookies?.session || req.headers.authorization?.replace('Bearer ', '');
+    const interviewId = req.params.id;
+
+    if (!sessionCookie) {
+      return res.status(401).json({ success: false, message: 'No session cookie provided' });
+    }
+
+    const decodedClaims = await auth.verifySessionCookie(sessionCookie, true);
+
+    const interviewDoc = await db.collection('interviews').doc(interviewId).get();
+
+    if (!interviewDoc.exists) {
+      return res.status(404).json({ success: false, message: 'Interview not found' });
+    }
+
+    const interviewData = interviewDoc.data();
+
+    // Optional: ensure user can only access their own interview
+    if (interviewData?.userId !== decodedClaims.uid) {
+      return res.status(403).json({ success: false, message: 'Unauthorized access to interview' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      interview: {
+        id: interviewDoc.id,
+        ...interviewData,
+      },
+    });
+  } catch (error) {
+    console.error('❌ Error fetching interview by ID:', error);
+    return res.status(500).json({ success: false, message: 'Failed to get interview by ID' });
+  }
+});
+
+
 export default router;

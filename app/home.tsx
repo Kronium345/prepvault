@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 import { Button } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import InterviewCard from '../components/InterviewCard';
-import { getCurrentUsers, getInterviewByCurrentUser, getLatestInterviews } from '../lib/actions/auth.action';
+import { getCurrentUsers } from '../lib/actions/auth.action';
+import { getInterviewByCurrentUser, getLatestInterviews } from '../lib/actions/general.action';
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
@@ -47,7 +48,7 @@ export default function Home() {
           </Text>
           <Button
             mode="contained"
-            onPress={() => router.push('/interview')}
+            onPress={() => router.push('/interview/interview')}
             style={styles.ctaButton}
             labelStyle={styles.ctaButtonText}
           >
