@@ -348,6 +348,7 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
           playsInSilentModeIOS: true,
           shouldDuckAndroid: true,
           playThroughEarpieceAndroid: false,
+          staysActiveInBackground: false,
         });
 
         addMessage('assistant', `Hello ${userName || 'there'}! I'll be your AI interviewer today for this ${role} position. As a ${level}-level candidate, let's dive into some ${type} Let's get started with some questions.`);
@@ -419,94 +420,58 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
   const startListening = async () => {
     try {
       console.log('🎧 startListening() triggered');
-      // 🛡️ FULLY unload first
+
       await safelyUnloadRecording();
-      console.log('♻️ Previous recording safely unloaded');
 
-      const newRecording = new Audio.Recording();
-      await newRecording.prepareToRecordAsync({
-        android: {
-          extension: '.m4a',
-          outputFormat: 2,  // 2 = MPEG_4 in Expo AV
-          audioEncoder: 3,  // 3 = AAC in Expo AV
-          sampleRate: 44100,
-          numberOfChannels: 1,
-          bitRate: 128000,
-        },
-        ios: {
-          extension: '.m4a',
-          audioQuality: 127, // 127 = HIGH
-          sampleRate: 44100,
-          numberOfChannels: 1,
-          bitRate: 128000,
-          outputFormat: 2, // 2 = MPEG4AAC
-        },
-        web: {
-          mimeType: 'audio/webm',
-          bitsPerSecond: 128000,
-        },
-        isMeteringEnabled: true,
-      });
-
-
-      await newRecording.startAsync();
-      setRecording(newRecording);
-
-      console.log('Started new recording ✅');
-      console.log('📡 Awaiting user input for 10 seconds...');
-
-      // Auto-stop after 10 seconds
-      // Cancel any existing timeout first
-      if (recordingTimeoutRef.current) {
-        clearTimeout(recordingTimeoutRef.current);
+      const permission = await Audio.requestPermissionsAsync();
+      if (permission.status !== 'granted') {
+        console.error('Microphone permission not granted');
+        return;
       }
 
-      // Set a new timeout
-      recordingTimeoutRef.current = setTimeout(() => {
-        console.log('⏱️ Clearing previous timeout');
-        stopListening(newRecording);
-      }, 15000);
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+        staysActiveInBackground: false,
+      });
 
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      setRecording(recording);
+      console.log('🎙️ Recording started');
+
+      // Stop after 10 seconds
+      if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
+      recordingTimeoutRef.current = setTimeout(() => stopListening(recording), 10000);
     } catch (error) {
       console.error('Failed to start recording:', error);
-      addMessage('user', "Sorry, I couldn't record my answer. Let's move to the next question.");
-      setCurrentQuestionIndex(prev => prev + 1);
-      setTimeout(() => askNextQuestion(), 1500);
     }
   };
 
 
 
 
+
   // Stop listening and process the user's answer
   const stopListening = async (localRecording?: Audio.Recording) => {
-    if (recordingTimeoutRef.current) {
-      console.log('🛑 Clearing recording timeout');
-      clearTimeout(recordingTimeoutRef.current);
-      recordingTimeoutRef.current = null;
-    }
-
-    const activeRecording = localRecording || recording;
-    if (!activeRecording) {
-      console.warn('❌ No active recording to stop.');
-      return;
-    }
-
     try {
-      const status = await activeRecording.getStatusAsync();
-      console.log('📏 Recording duration (ms):', status.durationMillis);
-      if (!status.isRecording && !status.isDoneRecording) {
-        console.warn('⚠️ Recording already stopped/unloaded.');
+      const activeRecording = localRecording || recording;
+      if (!activeRecording) {
+        console.warn("❌ No active recording to stop.");
         return;
       }
 
       await activeRecording.stopAndUnloadAsync();
       const uri = activeRecording.getURI();
-      console.log('📂 Recorded file URI:', uri);
+      console.log("📂 Recorded file URI:", uri);
+
       setRecording(null);
 
       if (!uri) {
-        console.warn('⚠️ No URI returned from recording.');
+        console.warn("⚠️ No URI returned from recording.");
         return;
       }
 
@@ -514,9 +479,9 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
       const transcript = await uploadRecording(uri);
       setIsUploading(false);
 
-      if (transcript && transcript.trim() !== '') {
-        console.log('📝 Non-empty transcript:', transcript);
-        addMessage('user', transcript);
+      if (transcript && transcript.trim() !== "") {
+        console.log("📝 Transcript:", transcript);
+        addMessage("user", transcript);
 
         const feedbackRes = await fetch('https://prepvault-1rdj.onrender.com/gemini/analyze-answer', {
           method: 'POST',
@@ -532,21 +497,23 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
           addMessage('assistant', feedbackData.feedback);
         }
       } else {
-        console.warn('⚠️ Transcription was empty or silent.');
-        addMessage('user', 'Sorry, I couldn’t process my answer.');
+        console.warn("⚠️ Transcription was empty or silent.");
+        addMessage("user", "Sorry, I couldn’t process my answer.");
       }
 
       setTimeout(() => {
         setCurrentQuestionIndex((prev) => prev + 1);
         askNextQuestion();
-      }, 10000); // Wait 5 seconds before AI feedback
+      }, 10000);
+
     } catch (error) {
-      console.error('❌ Failed to stop recording:', error);
-      addMessage('user', 'Something went wrong during recording.');
+      console.error("❌ Failed to stop recording:", error);
+      addMessage("user", "Something went wrong during recording.");
       setCurrentQuestionIndex((prev) => prev + 1);
       setTimeout(() => askNextQuestion(), 1500);
     }
   };
+
 
 
 
