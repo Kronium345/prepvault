@@ -393,7 +393,10 @@ const Agent = ({ userName, userId, type = 'technical', role = 'Software Develope
       await Speech.speak(finalMessage, {
         onDone: () => {
           setIsSpeaking(false);
-          setTimeout(() => setCallStatus(CallStatus.FINISHED), 2000);
+          (async () => {
+            await handleGenerateFeedback(messages);
+            setCallStatus(CallStatus.FINISHED);
+          })();
         }
       });
     }

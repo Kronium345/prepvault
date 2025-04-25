@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth';
 import vapiRoutes from './routes/vapi';
 import geminiRoutes from './routes/gemini';
+import feedbackRoutes from './routes/feedback';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -27,6 +28,7 @@ app.use(cookieParser());
 app.use('/auth', authRoutes);
 app.use('/vapi', vapiRoutes);
 app.use('/gemini', geminiRoutes);
+app.use('/feedback', feedbackRoutes);
 
 app.get('/', (req, res) => {
   res.send('PrepVault server is running!');
