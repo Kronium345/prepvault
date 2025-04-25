@@ -75,8 +75,9 @@ export async function getInterviewById(id: string): Promise<Interview | null> {
 
         return data.interview as Interview;
     } catch (err) {
-        console.error('❌ Failed to fetch interview by ID:', err);
+        console.error('Failed to fetch interview by ID:', err);
         return null;
     }
 }
+
 

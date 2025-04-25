@@ -20,7 +20,7 @@ console.log('Interview Cover URL:', getRandomInterviewCover());
 
 
 interface InterviewCardProps {
-  interviewId: string;
+  id: string;
   userId: string;
   role: string;
   type: string;
@@ -38,7 +38,7 @@ interface Feedback {
 }
 
 const InterviewCard = ({
-  interviewId,
+  id,
   userId,
   role,
   type,
@@ -59,8 +59,8 @@ const InterviewCard = ({
 
   const handlePress = () => {
     const route = feedback
-      ? `/interview/${interviewId}/feedback`
-      : `/interview/${interviewId}`;
+      ? `/interview/${id}/feedback`
+      : `/interview/${id}/details`;
     router.push(route);
   };
 

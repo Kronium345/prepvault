@@ -206,17 +206,19 @@ router.get('/interview/latest', async (req: Request, res: Response): Promise<any
   }
 });
 
-// ✅ GET /auth/interview/:id
+// GET /interview/:id
 router.get('/interview/:id', async (req: Request, res: Response): Promise<any> => {
   try {
     const sessionCookie = req.cookies?.session || req.headers.authorization?.replace('Bearer ', '');
-    const interviewId = req.params.id;
 
     if (!sessionCookie) {
-      return res.status(401).json({ success: false, message: 'No session cookie provided' });
+      return res.status(401).json({ success: false, message: 'No session token found' });
     }
 
     const decodedClaims = await auth.verifySessionCookie(sessionCookie, true);
+    const currentUserId = decodedClaims.uid;
+
+    const interviewId = req.params.id;
 
     const interviewDoc = await db.collection('interviews').doc(interviewId).get();
 
@@ -226,23 +228,18 @@ router.get('/interview/:id', async (req: Request, res: Response): Promise<any> =
 
     const interviewData = interviewDoc.data();
 
-    // Optional: ensure user can only access their own interview
-    if (interviewData?.userId !== decodedClaims.uid) {
+    // Optional: Check if user is authorized to view this interview (e.g., public or userId matches)
+    if (interviewData?.userId !== currentUserId && !interviewData?.finalized) {
       return res.status(403).json({ success: false, message: 'Unauthorized access to interview' });
     }
 
-    return res.status(200).json({
-      success: true,
-      interview: {
-        id: interviewDoc.id,
-        ...interviewData,
-      },
-    });
+    return res.status(200).json({ success: true, interview: { id: interviewDoc.id, ...interviewData } });
   } catch (error) {
     console.error('❌ Error fetching interview by ID:', error);
-    return res.status(500).json({ success: false, message: 'Failed to get interview by ID' });
+    return res.status(500).json({ success: false, message: 'Failed to fetch interview' });
   }
 });
+
 
 
 export default router;

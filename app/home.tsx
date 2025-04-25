@@ -76,7 +76,7 @@ export default function Home() {
               userInterviews.map((interview) => (
                 <InterviewCard
                   {...interview}
-                  interviewId={interview.id}
+                  id={interview.id}
                   key={interview.id}
                 />
               ))
@@ -96,7 +96,7 @@ export default function Home() {
               latestInterviews.map((interview) => (
                 <InterviewCard
                   {...interview}
-                  interviewId={interview.id}
+                  id={interview.id}
                   key={interview.id}
                 />
               ))
