@@ -38,3 +38,5 @@ yarn-error.*
 # Google Cloud service account
 /server/google-service-account.json
 
+
+.env.local

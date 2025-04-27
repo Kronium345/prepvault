@@ -10,6 +10,7 @@ import {
 import { Redirect, useRouter, useFocusEffect } from 'expo-router';
 import { isAuthenticated } from '../lib/actions/auth.action';
 import tw from 'twrnc';
+import * as Sentry from '@sentry/react-native'; // 🔥 Sentry import
 
 export default function Index() {
   const [loading, setLoading] = useState(true);
@@ -21,10 +22,14 @@ export default function Index() {
       let isActive = true;
 
       const checkAuth = async () => {
-        const authStatus = await isAuthenticated();
-        if (isActive) {
-          setIsAuth(authStatus);
-          setLoading(false);
+        try {
+          const authStatus = await isAuthenticated();
+          if (isActive) {
+            setIsAuth(authStatus);
+            setLoading(false);
+          }
+        } catch (error) {
+          Sentry.captureException(error); // 🔥 Capture error
         }
       };
 

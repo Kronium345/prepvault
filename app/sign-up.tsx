@@ -4,6 +4,19 @@ import { View, StyleSheet, Image, Text, TouchableOpacity } from 'react-native';
 import AuthForm from '../components/AuthForm';
 import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
+import Logo from '../assets/logo.svg';
+import { ErrorBoundary } from 'react-error-boundary';
+
+function ErrorFallback({ error }: { error: Error }) {
+  return (
+    <View style={{ padding: 20 }}>
+      <Text style={{ color: 'red', fontWeight: 'bold' }}>Oops! Something went wrong:</Text>
+      <Text>{error.message}</Text>
+    </View>
+  );
+}
+
+
 
 export default function SignUp() {
   const router = useRouter();
@@ -12,10 +25,12 @@ export default function SignUp() {
     <>
       <View style={styles.container}>
         <View style={styles.card}>
-          <Image source={require('../assets/logo.svg')} style={styles.logo} />
+          <Logo width={42} height={42} />
           <Text style={styles.heading}>Practice job interviews with AI</Text>
 
-          <AuthForm type="sign-up" />
+          <ErrorBoundary FallbackComponent={ErrorFallback}>
+            <AuthForm type="sign-up" />
+          </ErrorBoundary>
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Have an account already?</Text>
